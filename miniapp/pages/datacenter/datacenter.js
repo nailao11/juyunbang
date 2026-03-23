@@ -1,0 +1,196 @@
+const api = require('../../utils/request')
+const { formatNumber, formatHeat, formatChange, formatFullDate, getWeekDay } = require('../../utils/format')
+
+const app = getApp()
+
+const TAB_MAP = {
+  play: { api: '/rank/play', label: '播放量' },
+  heat: { api: '/rank/heat', label: '热度' },
+  power: { api: '/rank/power', label: '剧力指数' },
+  discuss: { api: '/rank/discuss', label: '讨论度' }
+}
+
+const TAB_INDEX = { play: 0, heat: 1, power: 2, discuss: 3 }
+
+Page({
+  data: {
+    mainTab: 'play',
+    mainTabIndex: 0,
+    periodTab: 'daily',
+    typeFilter: '',
+    currentDate: '',
+    displayDate: '',
+    weekday: '',
+    isToday: true,
+    rankList: [],
+    loading: true,
+    darkMode: false,
+    page: 1,
+    hasMore: true
+  },
+
+  onLoad() {
+    const today = this._getToday()
+    this.setData({
+      currentDate: today,
+      displayDate: today,
+      weekday: getWeekDay(today),
+      isToday: true
+    })
+    this.loadRankData()
+  },
+
+  onShow() {
+    this.setData({ darkMode: app.globalData.themeMode === 'dark' })
+  },
+
+  onPullDownRefresh() {
+    this.setData({ page: 1, hasMore: true })
+    this.loadRankData().then(() => wx.stopPullDownRefresh())
+  },
+
+  onReachBottom() {
+    if (this.data.hasMore && !this.data.loading) {
+      this.setData({ page: this.data.page + 1 })
+      this.loadRankData(true)
+    }
+  },
+
+  // 加载排行数据
+  async loadRankData(append = false) {
+    if (!append) this.setData({ loading: true })
+
+    try {
+      const { mainTab, periodTab, typeFilter, currentDate, page } = this.data
+      const config = TAB_MAP[mainTab]
+
+      const params = {
+        date: currentDate,
+        period: periodTab,
+        type: typeFilter,
+        page,
+        limit: 30
+      }
+
+      const data = await api.get(config.api, params)
+      let list = data.list || data || []
+
+      const maxVal = list.length > 0
+        ? Math.max(...list.map(i => Number(i.value || i.play_count || i.heat_value || 0)))
+        : 1
+
+      list = list.map((item, idx) => ({
+        ...item,
+        value_display: this._formatValue(item, mainTab),
+        change_display: item.change_pct ? formatChange(item.change_pct) : '',
+        trend: item.trend || 'flat',
+        bar_width: Math.round((Number(item.value || item.play_count || item.heat_value || 0) / maxVal) * 100),
+        is_new: item.is_new || false,
+        rank_change: item.rank_change
+      }))
+
+      const newList = append ? [...this.data.rankList, ...list] : list
+
+      this.setData({
+        rankList: newList,
+        loading: false,
+        hasMore: list.length >= 30
+      })
+    } catch (e) {
+      console.error('加载排行数据失败', e)
+      this.setData({ loading: false })
+      if (!append) {
+        wx.showToast({ title: '加载失败', icon: 'none' })
+      }
+    }
+  },
+
+  _formatValue(item, tab) {
+    const val = item.value || item.play_count || item.heat_value || 0
+    if (tab === 'play') return formatNumber(val)
+    if (tab === 'heat') return formatHeat(val)
+    if (tab === 'power') return val.toFixed ? val.toFixed(1) : val
+    if (tab === 'discuss') return formatNumber(val)
+    return formatNumber(val)
+  },
+
+  // 切换主Tab
+  switchMainTab(e) {
+    const tab = e.currentTarget.dataset.tab
+    this.setData({
+      mainTab: tab,
+      mainTabIndex: TAB_INDEX[tab],
+      page: 1,
+      rankList: []
+    })
+    this.loadRankData()
+  },
+
+  // 切换时间维度
+  switchPeriod(e) {
+    const period = e.currentTarget.dataset.period
+    this.setData({ periodTab: period, page: 1, rankList: [] })
+    this.loadRankData()
+  },
+
+  // 切换类型筛选
+  switchTypeFilter(e) {
+    const type = e.currentTarget.dataset.type
+    this.setData({ typeFilter: type, page: 1, rankList: [] })
+    this.loadRankData()
+  },
+
+  // 前一天
+  prevDay() {
+    const d = new Date(this.data.currentDate)
+    d.setDate(d.getDate() - 1)
+    const dateStr = formatFullDate(d)
+    this.setData({
+      currentDate: dateStr,
+      displayDate: dateStr,
+      weekday: getWeekDay(dateStr),
+      isToday: dateStr === this._getToday(),
+      page: 1,
+      rankList: []
+    })
+    this.loadRankData()
+  },
+
+  // 后一天
+  nextDay() {
+    if (this.data.isToday) return
+    const d = new Date(this.data.currentDate)
+    d.setDate(d.getDate() + 1)
+    const dateStr = formatFullDate(d)
+    this.setData({
+      currentDate: dateStr,
+      displayDate: dateStr,
+      weekday: getWeekDay(dateStr),
+      isToday: dateStr === this._getToday(),
+      page: 1,
+      rankList: []
+    })
+    this.loadRankData()
+  },
+
+  // 打开日期选择器
+  openDatePicker() {
+    const today = this._getToday()
+    wx.showActionSheet({
+      itemList: ['选择日期'],
+      success: () => {
+        // 使用picker组件的方式不太合适，这里使用简单处理
+      }
+    })
+  },
+
+  // 跳转详情
+  goDetail(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
+  },
+
+  _getToday() {
+    return formatFullDate(new Date())
+  }
+})

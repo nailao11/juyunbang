@@ -1,0 +1,105 @@
+<!--pages/tracking-list/tracking-list.wxml - 追剧清单-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- Tab切换 -->
+  <view class="tl-tabs">
+    <view class="tl-tab {{activeTab === 'watching' ? 'active' : ''}}"
+          bindtap="switchTab" data-tab="watching">
+      <text class="tl-tab-text">在追</text>
+      <text class="tl-tab-count" wx:if="{{counts.watching}}">{{counts.watching}}</text>
+    </view>
+    <view class="tl-tab {{activeTab === 'want_to_watch' ? 'active' : ''}}"
+          bindtap="switchTab" data-tab="want_to_watch">
+      <text class="tl-tab-text">想看</text>
+      <text class="tl-tab-count" wx:if="{{counts.want_to_watch}}">{{counts.want_to_watch}}</text>
+    </view>
+    <view class="tl-tab {{activeTab === 'watched' ? 'active' : ''}}"
+          bindtap="switchTab" data-tab="watched">
+      <text class="tl-tab-text">看完</text>
+      <text class="tl-tab-count" wx:if="{{counts.watched}}">{{counts.watched}}</text>
+    </view>
+    <view class="tl-tab {{activeTab === 'dropped' ? 'active' : ''}}"
+          bindtap="switchTab" data-tab="dropped">
+      <text class="tl-tab-text">弃剧</text>
+      <text class="tl-tab-count" wx:if="{{counts.dropped}}">{{counts.dropped}}</text>
+    </view>
+  </view>
+
+  <!-- 列表 -->
+  <view class="tl-list container" wx:if="{{list.length > 0}}">
+    <view class="tl-item card" wx:for="{{list}}" wx:key="id">
+      <view class="tl-item-main" bindtap="goDetail" data-id="{{item.drama_id}}">
+        <!-- 海报 -->
+        <image class="tl-poster" src="{{item.poster_url || '/images/default/poster.png'}}"
+               mode="aspectFill" lazy-load></image>
+
+        <!-- 信息 -->
+        <view class="tl-info flex-1">
+          <text class="tl-title">{{item.title}}</text>
+          <view class="tl-meta">
+            <view class="platform-tag" style="background:{{item.platform_color || '#667eea'}}"
+                  wx:if="{{item.platform_name}}">
+              {{item.platform_name}}
+            </view>
+            <text class="tl-status status-{{item.drama_status}}">
+              {{item.drama_status === 'airing' ? '热播中' : (item.drama_status === 'finished' ? '已完结' : '待播出')}}
+            </text>
+          </view>
+
+          <!-- 观看进度 (在追时显示) -->
+          <view class="tl-progress" wx:if="{{activeTab === 'watching' && item.total_episodes}}">
+            <view class="progress-bar">
+              <view class="progress-fill" style="width: {{item.progress || 0}}%"></view>
+            </view>
+            <text class="progress-text">{{item.current_ep || 0}}/{{item.total_episodes}}集</text>
+          </view>
+
+          <!-- 评分 (看完时显示) -->
+          <view class="tl-rating" wx:if="{{activeTab === 'watched' && item.my_rating}}">
+            <text class="rating-label">我的评分:</text>
+            <text class="rating-stars">
+              <text wx:for="{{5}}" wx:key="*this" wx:for-item="star"
+                    style="color: {{star < item.my_rating ? '#FFD700' : '#ccc'}};">★</text>
+            </text>
+          </view>
+
+          <text class="tl-time">{{item.update_time_display}}</text>
+        </view>
+      </view>
+
+      <!-- 操作区 -->
+      <view class="tl-actions">
+        <view class="tl-action-btn" wx:if="{{activeTab === 'watching'}}"
+              bindtap="updateProgress" data-id="{{item.id}}" data-current="{{item.current_ep}}"
+              data-total="{{item.total_episodes}}">
+          <text class="action-btn-text">更新进度</text>
+        </view>
+        <view class="tl-action-btn" wx:if="{{activeTab === 'want_to_watch'}}"
+              bindtap="startWatching" data-id="{{item.id}}">
+          <text class="action-btn-text">开始追剧</text>
+        </view>
+        <view class="tl-action-btn danger" bindtap="removeTracking" data-id="{{item.id}}">
+          <text class="action-btn-text">移除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-dots" wx:if="{{loading}}">
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+    <image src="/images/default/empty.png" class="icon" mode="aspectFit"></image>
+    <text class="text">{{emptyText}}</text>
+    <view class="btn-primary" style="margin-top: 24rpx; font-size: 26rpx; padding: 16rpx 40rpx;"
+          bindtap="goDiscover">去发现好剧</view>
+  </view>
+
+  <!-- 底部安全距离 -->
+  <view style="height: 40rpx;"></view>
+</view>

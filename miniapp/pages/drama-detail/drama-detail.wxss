@@ -1,0 +1,608 @@
+/* 剧集详情样式 */
+
+/* 自定义导航栏 */
+.custom-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transition: background 0.3s;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  padding: 0 24rpx;
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+}
+
+.back-icon {
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: 300;
+  margin-top: -4rpx;
+}
+
+.nav-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  max-width: 400rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-share {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+}
+
+.share-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+/* 头部海报区 */
+.detail-header {
+  position: relative;
+  min-height: 600rpx;
+  overflow: hidden;
+}
+
+.header-bg-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 650rpx;
+  filter: blur(20px) brightness(0.6);
+  transform: scale(1.2);
+}
+
+.header-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 300rpx;
+  background: linear-gradient(transparent, var(--bg));
+}
+
+.header-content {
+  position: relative;
+  padding: 40rpx 32rpx;
+  z-index: 2;
+}
+
+.drama-main-info {
+  display: flex;
+  padding-top: 40rpx;
+}
+
+.drama-poster {
+  width: 220rpx;
+  height: 310rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.4);
+  background: var(--border);
+}
+
+.drama-text-info {
+  flex: 1;
+  margin-left: 28rpx;
+  padding-top: 8rpx;
+}
+
+.drama-title {
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #fff;
+  display: block;
+  line-height: 1.3;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
+}
+
+.drama-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+
+.drama-genre-tag {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 4rpx 14rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8rpx;
+  backdrop-filter: blur(10px);
+}
+
+.drama-meta-list {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  gap: 8rpx;
+}
+
+.drama-meta-item {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.drama-meta-sep {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.drama-platform-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  gap: 12rpx;
+}
+
+/* 豆瓣评分 */
+.douban-score-wrap {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+  gap: 8rpx;
+}
+
+.douban-label {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 2rpx 8rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 4rpx;
+}
+
+.douban-score {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #FFD700;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+}
+
+.star-row {
+  display: flex;
+}
+
+.star {
+  font-size: 22rpx;
+}
+
+/* 操作按钮栏 */
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  position: relative;
+  z-index: 3;
+  padding: 24rpx 0;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 12rpx 0;
+}
+
+.action-btn.active .action-text {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.action-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 8rpx;
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.action-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: var(--border);
+}
+
+/* 区块卡片 */
+.section-card {
+  margin-left: 24rpx;
+  margin-right: 24rpx;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.section-card-title {
+  display: flex;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 28rpx 20rpx;
+  gap: 8rpx;
+}
+
+.section-icon {
+  font-size: 28rpx;
+}
+
+/* 实时热度 */
+.heat-overview {
+  padding: 0 28rpx;
+}
+
+.heat-main-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  margin-bottom: 24rpx;
+}
+
+.heat-value-big {
+  font-size: 56rpx;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.heat-unit {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.heat-stats-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.heat-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.heat-stat-label {
+  font-size: 22rpx;
+  color: var(--text-light);
+  margin-bottom: 8rpx;
+}
+
+.heat-stat-value {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* 剧力指数 */
+.power-index {
+  padding: 0 28rpx;
+}
+
+.power-score {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.power-score-num {
+  font-size: 52rpx;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.power-score-label {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.radar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 320rpx;
+  margin-bottom: 24rpx;
+  position: relative;
+}
+
+.radar-bg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.radar-ring {
+  position: absolute;
+  border: 2rpx solid var(--border);
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+.radar-hint {
+  position: absolute;
+  font-size: 24rpx;
+  color: var(--text-light);
+}
+
+.power-dimensions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.power-dim {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.dim-name {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  width: 100rpx;
+  flex-shrink: 0;
+}
+
+.dim-bar {
+  flex: 1;
+  height: 12rpx;
+  background: var(--border);
+  border-radius: 6rpx;
+  overflow: hidden;
+}
+
+.dim-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 6rpx;
+  transition: width 0.5s ease;
+}
+
+.dim-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text);
+  width: 60rpx;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* 播放量数据 */
+.play-data {
+  padding: 0 28rpx;
+}
+
+.play-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24rpx;
+}
+
+.play-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.play-stat-num {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.play-stat-label {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-top: 8rpx;
+}
+
+/* 社交媒体 */
+.social-data {
+  padding: 0 28rpx;
+}
+
+.social-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.social-item:last-child {
+  border-bottom: none;
+}
+
+.social-icon-wrap {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.social-icon-text {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 700;
+}
+
+.social-info {
+  overflow: hidden;
+}
+
+.social-platform {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+}
+
+.social-metric {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  display: block;
+  margin-top: 4rpx;
+}
+
+.social-trend {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+/* 主创信息 */
+.cast-scroll {
+  white-space: nowrap;
+}
+
+.cast-list {
+  display: inline-flex;
+  padding: 0 28rpx;
+  gap: 24rpx;
+}
+
+.cast-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 120rpx;
+}
+
+.cast-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: var(--border);
+  margin-bottom: 8rpx;
+}
+
+.cast-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120rpx;
+}
+
+.cast-role {
+  font-size: 20rpx;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120rpx;
+}
+
+/* 剧情简介 */
+.synopsis {
+  padding: 0 28rpx;
+}
+
+.synopsis-text {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  display: block;
+}
+
+.synopsis-text.collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.synopsis-toggle {
+  text-align: center;
+  padding: 16rpx 0;
+}
+
+.toggle-text {
+  font-size: 24rpx;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* 相关推荐 */
+.related-scroll {
+  white-space: nowrap;
+}
+
+.related-list {
+  display: inline-flex;
+  padding: 0 28rpx;
+  gap: 20rpx;
+}
+
+.related-item {
+  display: inline-flex;
+  flex-direction: column;
+  width: 180rpx;
+}
+
+.related-poster {
+  width: 180rpx;
+  height: 250rpx;
+  border-radius: 12rpx;
+  background: var(--border);
+  margin-bottom: 8rpx;
+}
+
+.related-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.related-score {
+  font-size: 22rpx;
+  color: #FFD700;
+  margin-top: 4rpx;
+}

@@ -1,0 +1,106 @@
+<!--pages/compare/compare.wxml - 数据对比-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+  <view class="container">
+
+    <!-- 选择剧集区域 -->
+    <view class="compare-select-row">
+      <view class="compare-slot card {{dramaA ? 'selected' : ''}}"
+            bindtap="selectDrama" data-slot="A">
+        <block wx:if="{{dramaA}}">
+          <image class="slot-poster" src="{{dramaA.poster_url || '/images/default/poster.png'}}"
+                 mode="aspectFill"></image>
+          <text class="slot-title">{{dramaA.title}}</text>
+          <view class="slot-remove" catchtap="removeDrama" data-slot="A">
+            <text class="remove-icon">×</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="slot-empty">
+            <text class="slot-add-icon">+</text>
+            <text class="slot-add-text">选择剧集A</text>
+          </view>
+        </block>
+      </view>
+
+      <view class="compare-vs">
+        <text class="vs-text">VS</text>
+      </view>
+
+      <view class="compare-slot card {{dramaB ? 'selected' : ''}}"
+            bindtap="selectDrama" data-slot="B">
+        <block wx:if="{{dramaB}}">
+          <image class="slot-poster" src="{{dramaB.poster_url || '/images/default/poster.png'}}"
+                 mode="aspectFill"></image>
+          <text class="slot-title">{{dramaB.title}}</text>
+          <view class="slot-remove" catchtap="removeDrama" data-slot="B">
+            <text class="remove-icon">×</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="slot-empty">
+            <text class="slot-add-icon">+</text>
+            <text class="slot-add-text">选择剧集B</text>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 对比数据 -->
+    <block wx:if="{{compareData}}">
+      <!-- 维度对比Tab -->
+      <view class="tab-bar mb-md">
+        <view class="tab-item {{compareTab === 'heat' ? 'active' : ''}}"
+              bindtap="switchCompareTab" data-tab="heat">热度</view>
+        <view class="tab-item {{compareTab === 'play' ? 'active' : ''}}"
+              bindtap="switchCompareTab" data-tab="play">播放量</view>
+        <view class="tab-item {{compareTab === 'social' ? 'active' : ''}}"
+              bindtap="switchCompareTab" data-tab="social">社交</view>
+        <view class="tab-item {{compareTab === 'score' ? 'active' : ''}}"
+              bindtap="switchCompareTab" data-tab="score">口碑</view>
+      </view>
+
+      <!-- 对比数据列表 -->
+      <view class="compare-data-list">
+        <view class="compare-row card" wx:for="{{compareData.metrics}}" wx:key="label">
+          <view class="compare-value-a {{item.a_win ? 'win' : ''}}">
+            <text class="cv-num">{{item.value_a}}</text>
+          </view>
+          <view class="compare-label-center">
+            <text class="cl-text">{{item.label}}</text>
+          </view>
+          <view class="compare-value-b {{item.b_win ? 'win' : ''}}">
+            <text class="cv-num">{{item.value_b}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 综合评价 -->
+      <view class="card compare-summary">
+        <text class="summary-title">综合对比</text>
+        <view class="summary-bar">
+          <view class="summary-bar-a" style="width: {{compareData.a_score_pct || 50}}%;">
+            <text class="bar-label">{{dramaA.title}}</text>
+          </view>
+          <view class="summary-bar-b" style="width: {{compareData.b_score_pct || 50}}%;">
+            <text class="bar-label">{{dramaB.title}}</text>
+          </view>
+        </view>
+        <text class="summary-desc">{{compareData.summary || '两部剧各有优势'}}</text>
+      </view>
+    </block>
+
+    <!-- 未选择状态 -->
+    <view class="empty-state" wx:if="{{!compareData && (!dramaA || !dramaB)}}">
+      <image src="/images/default/empty.png" class="icon" mode="aspectFit"></image>
+      <text class="text">选择两部剧集开始对比</text>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading-dots" wx:if="{{loading}}">
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+    </view>
+
+  </view>
+</view>

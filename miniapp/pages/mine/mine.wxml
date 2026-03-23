@@ -1,0 +1,142 @@
+<!--pages/mine/mine.wxml - 个人中心-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- 顶部渐变头部 -->
+  <view class="mine-header">
+    <view class="header-bg"></view>
+    <view class="user-section">
+      <!-- 头像 -->
+      <view class="avatar-wrap" bindtap="chooseAvatar">
+        <image class="avatar" src="{{userInfo.avatar || '/images/default/avatar.png'}}" mode="aspectFill"></image>
+        <view class="avatar-badge" wx:if="{{!userInfo.avatar}}">
+          <text class="badge-text">+</text>
+        </view>
+      </view>
+      <!-- 昵称 -->
+      <view class="user-info">
+        <text class="nickname" wx:if="{{userInfo.nickname}}">{{userInfo.nickname}}</text>
+        <text class="nickname login-hint" wx:else bindtap="getUserProfile">点击登录</text>
+        <text class="user-id" wx:if="{{userInfo.id}}">ID: {{userInfo.id}}</text>
+      </view>
+    </view>
+
+    <!-- 追剧统计 -->
+    <view class="stats-row">
+      <view class="stat-item" bindtap="goTrackingList" data-tab="watching">
+        <view class="stat-circle">
+          <view class="circle-progress" style="background: conic-gradient(#667eea {{watchingPercent}}%, var(--border) 0);">
+            <view class="circle-inner">
+              <text class="stat-num">{{stats.watching || 0}}</text>
+            </view>
+          </view>
+        </view>
+        <text class="stat-label">在追</text>
+      </view>
+      <view class="stat-item" bindtap="goTrackingList" data-tab="want">
+        <view class="stat-circle">
+          <view class="circle-progress" style="background: conic-gradient(#f093fb {{wantPercent}}%, var(--border) 0);">
+            <view class="circle-inner">
+              <text class="stat-num">{{stats.want || 0}}</text>
+            </view>
+          </view>
+        </view>
+        <text class="stat-label">想看</text>
+      </view>
+      <view class="stat-item" bindtap="goTrackingList" data-tab="watched">
+        <view class="stat-circle">
+          <view class="circle-progress" style="background: conic-gradient(#2dce89 {{watchedPercent}}%, var(--border) 0);">
+            <view class="circle-inner">
+              <text class="stat-num">{{stats.watched || 0}}</text>
+            </view>
+          </view>
+        </view>
+        <text class="stat-label">看完</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-section container">
+    <!-- 追剧工具 -->
+    <view class="card menu-card">
+      <view class="menu-group-title">追剧工具</view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/tracking-list/tracking-list">
+        <view class="menu-icon-wrap" style="background: rgba(102,126,234,0.1);">
+          <image class="menu-icon" src="/images/icons/list.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">追剧清单</text>
+        <text class="menu-badge" wx:if="{{stats.watching > 0}}">{{stats.watching}}</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/notes/notes">
+        <view class="menu-icon-wrap" style="background: rgba(240,147,251,0.1);">
+          <image class="menu-icon" src="/images/icons/note.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">追剧笔记</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/tracking-report/tracking-report">
+        <view class="menu-icon-wrap" style="background: rgba(45,206,137,0.1);">
+          <image class="menu-icon" src="/images/icons/report.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">追剧报告</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <!-- 设置 -->
+    <view class="card menu-card">
+      <view class="menu-group-title">设置与帮助</view>
+      <view class="menu-item">
+        <view class="menu-icon-wrap" style="background: rgba(50,50,93,0.1);">
+          <image class="menu-icon" src="/images/icons/moon.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">深色模式</text>
+        <switch class="dark-switch" checked="{{darkMode}}" bindchange="toggleDarkMode" color="#667eea"/>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/settings/settings">
+        <view class="menu-icon-wrap" style="background: rgba(142,148,170,0.1);">
+          <image class="menu-icon" src="/images/icons/settings.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">设置</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/data-explanation/data-explanation">
+        <view class="menu-icon-wrap" style="background: rgba(102,126,234,0.1);">
+          <image class="menu-icon" src="/images/icons/info.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">数据说明</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/feedback/feedback">
+        <view class="menu-icon-wrap" style="background: rgba(251,99,64,0.1);">
+          <image class="menu-icon" src="/images/icons/feedback.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">意见反馈</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/about/about">
+        <view class="menu-icon-wrap" style="background: rgba(118,75,162,0.1);">
+          <image class="menu-icon" src="/images/icons/about.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">关于我们</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <!-- 底部信息 -->
+    <view class="footer-info">
+      <text class="footer-text">剧云榜 v1.0.0</text>
+      <text class="footer-text">数据仅供参考，不构成任何建议</text>
+    </view>
+  </view>
+
+  <!-- 底部安全距离 -->
+  <view style="height: 120rpx;"></view>
+</view>

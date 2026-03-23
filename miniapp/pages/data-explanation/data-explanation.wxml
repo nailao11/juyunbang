@@ -1,0 +1,54 @@
+<!--pages/data-explanation/data-explanation.wxml - 数据说明-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+  <view class="container">
+
+    <!-- 顶部说明 -->
+    <view class="card de-intro">
+      <text class="de-intro-text">
+        剧云榜整合多个公开数据源，通过科学算法生成各维度数据指标。以下是各项数据的详细说明。
+      </text>
+    </view>
+
+    <!-- 数据指标说明 -->
+    <view class="card de-card" wx:for="{{sections}}" wx:key="title">
+      <view class="de-header">
+        <text class="de-icon">{{item.icon}}</text>
+        <text class="de-title">{{item.title}}</text>
+      </view>
+      <view class="de-content">
+        <view class="de-item" wx:for="{{item.items}}" wx:for-item="sub" wx:key="name">
+          <text class="de-item-name">{{sub.name}}</text>
+          <text class="de-item-desc">{{sub.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 常见问题 -->
+    <view class="card de-card">
+      <view class="de-header">
+        <text class="de-icon">❓</text>
+        <text class="de-title">常见问题</text>
+      </view>
+      <view class="faq-list">
+        <view class="faq-item" wx:for="{{faqs}}" wx:key="q"
+              bindtap="toggleFaq" data-index="{{index}}">
+          <view class="faq-question">
+            <text class="faq-q">{{item.q}}</text>
+            <text class="faq-arrow {{item.open ? 'open' : ''}}">›</text>
+          </view>
+          <view class="faq-answer" wx:if="{{item.open}}">
+            <text class="faq-a">{{item.a}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 免责提醒 -->
+    <view class="de-disclaimer">
+      <text class="disclaimer-text">
+        以上数据均来源于公开渠道，仅供参考。如有疑问请联系我们。
+      </text>
+    </view>
+
+  </view>
+</view>

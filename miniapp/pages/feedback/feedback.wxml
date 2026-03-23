@@ -1,0 +1,61 @@
+<!--pages/feedback/feedback.wxml - 意见反馈-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+  <view class="container">
+
+    <!-- 反馈类型 -->
+    <view class="card feedback-card">
+      <text class="fb-label">反馈类型</text>
+      <view class="fb-type-row">
+        <view class="fb-type {{feedbackType === item.key ? 'active' : ''}}"
+              wx:for="{{types}}" wx:key="key"
+              bindtap="selectType" data-type="{{item.key}}">
+          <text class="fb-type-emoji">{{item.emoji}}</text>
+          <text class="fb-type-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 反馈内容 -->
+    <view class="card feedback-card">
+      <text class="fb-label">详细描述</text>
+      <textarea class="fb-textarea" placeholder="请详细描述您的问题或建议..."
+                value="{{content}}" bindinput="onContentInput"
+                maxlength="500" auto-height />
+      <text class="fb-counter">{{content.length}}/500</text>
+    </view>
+
+    <!-- 截图 -->
+    <view class="card feedback-card">
+      <text class="fb-label">截图（可选）</text>
+      <view class="fb-images">
+        <view class="fb-img-item" wx:for="{{images}}" wx:key="*this">
+          <image class="fb-img" src="{{item}}" mode="aspectFill"></image>
+          <view class="fb-img-del" bindtap="removeImage" data-index="{{index}}">
+            <text class="del-icon">×</text>
+          </view>
+        </view>
+        <view class="fb-img-add" wx:if="{{images.length < 3}}" bindtap="addImage">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 联系方式 -->
+    <view class="card feedback-card">
+      <text class="fb-label">联系方式（可选）</text>
+      <input class="fb-input" placeholder="微信号或手机号，方便我们联系您"
+             value="{{contact}}" bindinput="onContactInput" />
+    </view>
+
+    <!-- 提交按钮 -->
+    <view class="btn-primary submit-btn {{canSubmit ? '' : 'disabled'}}" bindtap="submit">
+      提交反馈
+    </view>
+
+    <view class="fb-tips">
+      <text class="tips-text">我们会认真阅读每一条反馈，感谢您的支持！</text>
+    </view>
+
+  </view>
+</view>
