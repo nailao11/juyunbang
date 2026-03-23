@@ -1,0 +1,112 @@
+<!--pages/search/search.wxml - 搜索页-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- 搜索头部 -->
+  <view class="search-header" style="padding-top: {{statusBarHeight}}px;">
+    <view class="search-row">
+      <view class="search-input-wrap">
+        <image class="search-input-icon" src="/images/icons/search.png" mode="aspectFit"></image>
+        <input class="search-input" placeholder="搜索剧集、演员、导演"
+               value="{{keyword}}" bindinput="onInput" bindconfirm="doSearch"
+               focus="{{autoFocus}}" confirm-type="search" />
+        <view class="search-clear" wx:if="{{keyword}}" bindtap="clearKeyword">
+          <text class="clear-icon">×</text>
+        </view>
+      </view>
+      <view class="search-cancel" bindtap="goBack">
+        <text class="cancel-text">取消</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 自动补全建议 -->
+  <view class="suggest-list" wx:if="{{suggestList.length > 0 && !searched}}">
+    <view class="suggest-item" wx:for="{{suggestList}}" wx:key="id"
+          bindtap="tapSuggest" data-keyword="{{item.title}}" data-id="{{item.id}}">
+      <image class="suggest-icon" src="/images/icons/search.png" mode="aspectFit"></image>
+      <text class="suggest-text">{{item.title}}</text>
+      <text class="suggest-type" wx:if="{{item.type}}">{{item.type}}</text>
+    </view>
+  </view>
+
+  <!-- 搜索前：热搜词 + 搜索历史 -->
+  <view class="search-home" wx:if="{{!searched && suggestList.length === 0}}">
+    <!-- 搜索历史 -->
+    <view class="search-section" wx:if="{{historyList.length > 0}}">
+      <view class="section-header-row">
+        <text class="section-label">搜索历史</text>
+        <view class="section-action" bindtap="clearHistory">
+          <image class="action-icon" src="/images/icons/delete.png" mode="aspectFit"></image>
+        </view>
+      </view>
+      <view class="tag-wrap">
+        <view class="history-tag" wx:for="{{historyList}}" wx:key="*this"
+              bindtap="tapHistory" data-keyword="{{item}}">
+          <text class="tag-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 热搜榜 -->
+    <view class="search-section">
+      <view class="section-header-row">
+        <text class="section-label">🔥 热搜榜</text>
+      </view>
+      <view class="hot-list">
+        <view class="hot-item" wx:for="{{hotList}}" wx:key="keyword"
+              bindtap="tapHot" data-keyword="{{item.keyword}}">
+          <text class="hot-rank {{index < 3 ? 'hot-top' : ''}}">{{index + 1}}</text>
+          <view class="hot-info flex-1">
+            <text class="hot-keyword">{{item.keyword}}</text>
+            <text class="hot-badge" wx:if="{{item.badge}}">{{item.badge}}</text>
+          </view>
+          <text class="hot-count">{{item.search_count || ''}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索结果 -->
+  <view class="search-results container" wx:if="{{searched}}">
+    <view class="result-count" wx:if="{{resultList.length > 0}}">
+      <text>找到 {{totalCount}} 个相关结果</text>
+    </view>
+
+    <view class="result-item card" wx:for="{{resultList}}" wx:key="id"
+          bindtap="goDetail" data-id="{{item.id}}">
+      <image class="result-poster" src="{{item.poster_url || '/images/default/poster.png'}}"
+             mode="aspectFill" lazy-load></image>
+      <view class="result-info flex-1">
+        <text class="result-title">{{item.title}}</text>
+        <view class="result-meta">
+          <view class="platform-tag" style="background:{{item.platform_color || '#667eea'}}"
+                wx:if="{{item.platform_name}}">
+            {{item.platform_name}}
+          </view>
+          <text class="result-genre">{{item.genre || ''}}</text>
+        </view>
+        <view class="result-sub">
+          <text class="result-cast" wx:if="{{item.cast}}">{{item.cast}}</text>
+        </view>
+        <view class="result-bottom">
+          <text class="result-score" wx:if="{{item.douban_score}}">豆瓣 {{item.douban_score}}</text>
+          <text class="result-heat" wx:if="{{item.heat_display}}">热度 {{item.heat_display}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空结果 -->
+    <view class="empty-state" wx:if="{{resultList.length === 0 && !loading}}">
+      <image src="/images/default/empty.png" class="icon" mode="aspectFit"></image>
+      <text class="text">没有找到相关结果</text>
+      <text class="text" style="font-size:24rpx;margin-top:12rpx;">换个关键词试试吧</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-dots" wx:if="{{loading}}">
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+  </view>
+</view>

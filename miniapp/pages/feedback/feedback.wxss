@@ -1,0 +1,166 @@
+/* 意见反馈样式 */
+
+.feedback-card {
+  padding: 24rpx 28rpx;
+}
+
+.fb-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+/* 反馈类型 */
+.fb-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.fb-type {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: var(--bg);
+  border-radius: 16rpx;
+  border: 2rpx solid transparent;
+  min-width: 140rpx;
+  transition: all 0.3s;
+}
+
+.fb-type.active {
+  border-color: var(--primary);
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.fb-type-emoji {
+  font-size: 36rpx;
+  margin-bottom: 8rpx;
+}
+
+.fb-type-name {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.fb-type.active .fb-type-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 文本域 */
+.fb-textarea {
+  width: 100%;
+  min-height: 200rpx;
+  font-size: 28rpx;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 16rpx;
+  background: var(--bg);
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+
+.fb-counter {
+  display: block;
+  text-align: right;
+  font-size: 22rpx;
+  color: var(--text-light);
+  margin-top: 8rpx;
+}
+
+/* 图片上传 */
+.fb-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.fb-img-item {
+  position: relative;
+  width: 180rpx;
+  height: 180rpx;
+}
+
+.fb-img {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 12rpx;
+  background: var(--border);
+}
+
+.fb-img-del {
+  position: absolute;
+  top: -10rpx;
+  right: -10rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: var(--danger);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.del-icon {
+  font-size: 24rpx;
+  color: #fff;
+}
+
+.fb-img-add {
+  width: 180rpx;
+  height: 180rpx;
+  border: 2rpx dashed var(--border);
+  border-radius: 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-icon {
+  font-size: 48rpx;
+  color: var(--text-light);
+  line-height: 1;
+}
+
+.add-text {
+  font-size: 22rpx;
+  color: var(--text-light);
+  margin-top: 8rpx;
+}
+
+/* 输入框 */
+.fb-input {
+  width: 100%;
+  height: 80rpx;
+  font-size: 28rpx;
+  color: var(--text);
+  padding: 0 16rpx;
+  background: var(--bg);
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+
+/* 提交按钮 */
+.submit-btn {
+  margin-top: 40rpx;
+}
+
+.submit-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.fb-tips {
+  text-align: center;
+  padding: 24rpx 0;
+}
+
+.tips-text {
+  font-size: 24rpx;
+  color: var(--text-light);
+}

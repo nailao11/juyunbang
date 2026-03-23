@@ -1,0 +1,90 @@
+<!--pages/about/about.wxml - 关于我们-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+  <view class="container">
+
+    <!-- Logo区 -->
+    <view class="about-logo-section">
+      <view class="logo-circle">
+        <text class="logo-text">剧</text>
+      </view>
+      <text class="app-name">剧云榜</text>
+      <text class="app-version">版本 1.0.0</text>
+      <text class="app-slogan">全平台追剧数据助手</text>
+    </view>
+
+    <!-- 简介 -->
+    <view class="card about-card">
+      <text class="about-desc">
+        剧云榜是一款专注于剧集数据追踪与分析的工具，整合全平台播放量、热度、口碑等多维数据，为追剧爱好者提供专业、全面的数据参考。
+      </text>
+    </view>
+
+    <!-- 功能介绍 -->
+    <view class="card about-card">
+      <text class="about-section-title">核心功能</text>
+      <view class="feature-list">
+        <view class="feature-item">
+          <text class="feature-icon">📊</text>
+          <view class="feature-info">
+            <text class="feature-name">实时热度监控</text>
+            <text class="feature-desc">全平台热度数据实时更新</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">📈</text>
+          <view class="feature-info">
+            <text class="feature-name">多维度榜单</text>
+            <text class="feature-desc">播放量、热度、剧力指数等多维排行</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🎯</text>
+          <view class="feature-info">
+            <text class="feature-name">智能追剧</text>
+            <text class="feature-desc">追剧清单、笔记、报告一站式管理</text>
+          </view>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🔍</text>
+          <view class="feature-info">
+            <text class="feature-name">数据对比</text>
+            <text class="feature-desc">多剧数据横向对比分析</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 链接 -->
+    <view class="card about-card">
+      <view class="about-link" bindtap="navigateTo" data-url="/pages/data-explanation/data-explanation">
+        <text class="link-text">数据说明</text>
+        <text class="link-arrow">›</text>
+      </view>
+      <view class="about-divider"></view>
+      <view class="about-link" bindtap="navigateTo" data-url="/pages/feedback/feedback">
+        <text class="link-text">意见反馈</text>
+        <text class="link-arrow">›</text>
+      </view>
+      <view class="about-divider"></view>
+      <view class="about-link" bindtap="copyContact">
+        <text class="link-text">联系我们</text>
+        <text class="link-value">juyunbang@example.com</text>
+      </view>
+    </view>
+
+    <!-- 免责声明 -->
+    <view class="card about-card">
+      <text class="about-section-title">免责声明</text>
+      <text class="disclaimer-text">
+        本小程序所展示的数据均来自公开渠道，仅供参考，不代表任何官方数据。数据可能存在延迟或误差，我们不对数据的准确性、完整性或及时性做任何保证。用户不应将本平台数据作为任何决策的唯一依据。如有侵权请联系我们处理。
+      </text>
+    </view>
+
+    <!-- 版权 -->
+    <view class="copyright">
+      <text class="copyright-text">Copyright 2024-2026 剧云榜</text>
+      <text class="copyright-text">All Rights Reserved</text>
+    </view>
+
+  </view>
+</view>

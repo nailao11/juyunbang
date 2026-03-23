@@ -1,0 +1,247 @@
+<!--pages/drama-detail/drama-detail.wxml - 剧集详情-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- 自定义导航栏 -->
+  <view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+    <view class="nav-bar">
+      <view class="nav-back" bindtap="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title" wx:if="{{scrolled}}">{{drama.title}}</text>
+      <view class="nav-share" bindtap="onShareTap">
+        <image src="/images/icons/share-white.png" class="share-icon" mode="aspectFit"></image>
+      </view>
+    </view>
+  </view>
+
+  <!-- 头部海报区 -->
+  <view class="detail-header">
+    <image class="header-bg-img" src="{{drama.poster_url || '/images/default/poster.png'}}"
+           mode="aspectFill"></image>
+    <view class="header-gradient"></view>
+    <view class="header-content" style="padding-top: {{statusBarHeight + 44}}px;">
+      <view class="drama-main-info">
+        <image class="drama-poster" src="{{drama.poster_url || '/images/default/poster.png'}}"
+               mode="aspectFill"></image>
+        <view class="drama-text-info">
+          <text class="drama-title">{{drama.title}}</text>
+          <view class="drama-tags">
+            <text class="drama-genre-tag" wx:for="{{drama.genres}}" wx:key="*this">{{item}}</text>
+          </view>
+          <view class="drama-meta-list">
+            <text class="drama-meta-item" wx:if="{{drama.region}}">{{drama.region}}</text>
+            <text class="drama-meta-sep" wx:if="{{drama.region}}">|</text>
+            <text class="drama-meta-item" wx:if="{{drama.total_episodes}}">{{drama.total_episodes}}集</text>
+            <text class="drama-meta-sep" wx:if="{{drama.total_episodes}}">|</text>
+            <text class="drama-meta-item" wx:if="{{drama.year}}">{{drama.year}}</text>
+          </view>
+          <view class="drama-platform-row" wx:if="{{drama.platform_name}}">
+            <view class="platform-tag" style="background:{{drama.platform_color || '#667eea'}}">
+              {{drama.platform_name}}
+            </view>
+            <text class="status-{{drama.status}}">
+              {{drama.status === 'airing' ? '热播中' : (drama.status === 'finished' ? '已完结' : '待播出')}}
+            </text>
+          </view>
+          <!-- 豆瓣评分 -->
+          <view class="douban-score-wrap" wx:if="{{drama.douban_score}}">
+            <text class="douban-label">豆瓣</text>
+            <text class="douban-score">{{drama.douban_score}}</text>
+            <view class="star-row">
+              <text class="star" wx:for="{{5}}" wx:key="*this"
+                    style="color: {{index < drama.star_count ? '#FFD700' : '#ccc'}};">★</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar card" style="margin: -20rpx 24rpx 20rpx;">
+    <view class="action-btn {{trackingStatus === 'watching' ? 'active' : ''}}"
+          bindtap="toggleTracking" data-status="watching">
+      <image class="action-icon" src="/images/icons/tracking.png" mode="aspectFit"></image>
+      <text class="action-text">{{trackingStatus === 'watching' ? '在追' : '追剧'}}</text>
+    </view>
+    <view class="action-divider"></view>
+    <view class="action-btn {{trackingStatus === 'want_to_watch' ? 'active' : ''}}"
+          bindtap="toggleTracking" data-status="want_to_watch">
+      <image class="action-icon" src="/images/icons/want.png" mode="aspectFit"></image>
+      <text class="action-text">{{trackingStatus === 'want_to_watch' ? '已想看' : '想看'}}</text>
+    </view>
+    <view class="action-divider"></view>
+    <view class="action-btn" bindtap="goNotes">
+      <image class="action-icon" src="/images/icons/note.png" mode="aspectFit"></image>
+      <text class="action-text">笔记</text>
+    </view>
+  </view>
+
+  <!-- 实时热度 -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">🔥</text>
+      <text>实时热度</text>
+    </view>
+    <view class="heat-overview">
+      <view class="heat-main-value">
+        <text class="heat-value-big">{{heatData.current || '-'}}</text>
+        <text class="heat-unit">热度值</text>
+      </view>
+      <view class="heat-stats-row">
+        <view class="heat-stat">
+          <text class="heat-stat-label">今日峰值</text>
+          <text class="heat-stat-value">{{heatData.today_peak || '-'}}</text>
+        </view>
+        <view class="heat-stat">
+          <text class="heat-stat-label">较昨日</text>
+          <text class="heat-stat-value trend-{{heatData.trend || 'flat'}}">
+            {{heatData.change_display || '-'}}
+          </text>
+        </view>
+        <view class="heat-stat">
+          <text class="heat-stat-label">全平台排名</text>
+          <text class="heat-stat-value">#{{heatData.rank || '-'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 剧力指数 (雷达图占位) -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">📊</text>
+      <text>剧力指数</text>
+    </view>
+    <view class="power-index">
+      <view class="power-score">
+        <text class="power-score-num">{{powerData.total || '-'}}</text>
+        <text class="power-score-label">综合指数</text>
+      </view>
+      <!-- 雷达图占位 -->
+      <view class="radar-placeholder">
+        <view class="radar-bg">
+          <view class="radar-ring" style="width: 300rpx; height: 300rpx;"></view>
+          <view class="radar-ring" style="width: 200rpx; height: 200rpx;"></view>
+          <view class="radar-ring" style="width: 100rpx; height: 100rpx;"></view>
+        </view>
+        <text class="radar-hint">剧力指数雷达图</text>
+      </view>
+      <view class="power-dimensions">
+        <view class="power-dim" wx:for="{{powerData.dimensions}}" wx:key="name">
+          <text class="dim-name">{{item.name}}</text>
+          <view class="dim-bar">
+            <view class="dim-bar-fill" style="width: {{item.value || 0}}%;"></view>
+          </view>
+          <text class="dim-value">{{item.value || 0}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 播放量数据 -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">▶️</text>
+      <text>播放量数据</text>
+    </view>
+    <view class="play-data">
+      <view class="play-stat-grid">
+        <view class="play-stat-item">
+          <text class="play-stat-num">{{playData.total_display || '-'}}</text>
+          <text class="play-stat-label">累计播放</text>
+        </view>
+        <view class="play-stat-item">
+          <text class="play-stat-num">{{playData.today_display || '-'}}</text>
+          <text class="play-stat-label">今日播放</text>
+        </view>
+        <view class="play-stat-item">
+          <text class="play-stat-num">{{playData.avg_display || '-'}}</text>
+          <text class="play-stat-label">日均播放</text>
+        </view>
+        <view class="play-stat-item">
+          <text class="play-stat-num trend-{{playData.trend || 'flat'}}">
+            {{playData.change_pct || '-'}}
+          </text>
+          <text class="play-stat-label">较昨日变化</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 社交媒体数据 -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">💬</text>
+      <text>社交媒体数据</text>
+    </view>
+    <view class="social-data">
+      <view class="social-item" wx:for="{{socialData}}" wx:key="platform">
+        <view class="social-icon-wrap" style="background: {{item.color}};">
+          <text class="social-icon-text">{{item.icon}}</text>
+        </view>
+        <view class="social-info flex-1">
+          <text class="social-platform">{{item.platform}}</text>
+          <text class="social-metric">{{item.metric}}: {{item.value_display}}</text>
+        </view>
+        <view class="social-trend">
+          <text class="trend-{{item.trend || 'flat'}}">{{item.change_display || '-'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 主创信息 -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">🎬</text>
+      <text>主创信息</text>
+    </view>
+    <scroll-view scroll-x class="cast-scroll">
+      <view class="cast-list">
+        <view class="cast-item" wx:for="{{drama.cast_list}}" wx:key="name">
+          <image class="cast-avatar" src="{{item.avatar || '/images/default/avatar.png'}}"
+                 mode="aspectFill"></image>
+          <text class="cast-name">{{item.name}}</text>
+          <text class="cast-role">{{item.role}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 剧情简介 -->
+  <view class="card container section-card">
+    <view class="section-card-title">
+      <text class="section-icon">📝</text>
+      <text>剧情简介</text>
+    </view>
+    <view class="synopsis">
+      <text class="synopsis-text {{showFullSynopsis ? '' : 'collapsed'}}">{{drama.synopsis || '暂无简介'}}</text>
+      <view class="synopsis-toggle" bindtap="toggleSynopsis" wx:if="{{drama.synopsis && drama.synopsis.length > 100}}">
+        <text class="toggle-text">{{showFullSynopsis ? '收起' : '展开全部'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 相关推荐 -->
+  <view class="card container section-card" wx:if="{{relatedList.length > 0}}">
+    <view class="section-card-title">
+      <text class="section-icon">🎯</text>
+      <text>相关推荐</text>
+    </view>
+    <scroll-view scroll-x class="related-scroll">
+      <view class="related-list">
+        <view class="related-item" wx:for="{{relatedList}}" wx:key="id"
+              bindtap="goDetail" data-id="{{item.id}}">
+          <image class="related-poster" src="{{item.poster_url || '/images/default/poster.png'}}"
+                 mode="aspectFill" lazy-load></image>
+          <text class="related-title">{{item.title}}</text>
+          <text class="related-score" wx:if="{{item.douban_score}}">{{item.douban_score}}分</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部安全距离 -->
+  <view style="height: 60rpx;"></view>
+</view>

@@ -1,0 +1,224 @@
+/* 个人中心样式 */
+
+/* 顶部渐变 */
+.mine-header {
+  position: relative;
+  padding-top: 88rpx;
+  padding-bottom: 40rpx;
+  overflow: hidden;
+}
+
+.header-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 0 60rpx 60rpx;
+}
+
+/* 用户信息 */
+.user-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 40rpx 40rpx 32rpx;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 128rpx;
+  height: 128rpx;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+}
+
+.avatar-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 36rpx;
+  height: 36rpx;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.badge-text {
+  font-size: 24rpx;
+  color: #667eea;
+  font-weight: 700;
+}
+
+.user-info {
+  margin-left: 28rpx;
+  flex: 1;
+}
+
+.nickname {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  display: block;
+}
+
+.login-hint {
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+.user-id {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  margin-top: 8rpx;
+}
+
+/* 追剧统计 */
+.stats-row {
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  padding: 24rpx 60rpx 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-circle {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 12rpx;
+}
+
+.circle-progress {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-inner {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 菜单卡片 */
+.menu-section {
+  margin-top: -20rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.menu-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.menu-group-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 24rpx 28rpx 8rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+}
+
+.menu-icon-wrap {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menu-icon {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+.menu-text {
+  flex: 1;
+  margin-left: 20rpx;
+  font-size: 30rpx;
+  color: var(--text);
+}
+
+.menu-badge {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  margin-right: 12rpx;
+}
+
+.menu-arrow {
+  width: 28rpx;
+  height: 28rpx;
+  opacity: 0.3;
+  flex-shrink: 0;
+}
+
+.menu-divider {
+  height: 1rpx;
+  background: var(--border);
+  margin-left: 112rpx;
+}
+
+.dark-switch {
+  transform: scale(0.85);
+}
+
+/* 底部信息 */
+.footer-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 0;
+}
+
+.footer-text {
+  font-size: 22rpx;
+  color: var(--text-light);
+  line-height: 1.8;
+}

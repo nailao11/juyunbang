@@ -1,0 +1,332 @@
+/* 剧云榜 — 全局样式 */
+
+/* 基础变量 */
+page {
+  --primary: #667eea;
+  --primary-dark: #764ba2;
+  --accent: #f093fb;
+  --success: #2dce89;
+  --warning: #fb6340;
+  --danger: #f5365c;
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --text: #32325d;
+  --text-secondary: #8898aa;
+  --text-light: #adb5bd;
+  --border: #e9ecef;
+  --shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+  --radius: 20rpx;
+  --radius-sm: 12rpx;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-size: 28rpx;
+  color: var(--text);
+  background-color: var(--bg);
+  line-height: 1.6;
+}
+
+/* 深色模式 */
+.dark-mode {
+  --bg: #171923;
+  --card: #1e2336;
+  --text: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-light: #718096;
+  --border: #2d3748;
+  --shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 通用容器 */
+.container {
+  padding: 24rpx;
+}
+
+.page-bg {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+/* 卡片 */
+.card {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.card-sm {
+  padding: 20rpx;
+  border-radius: var(--radius-sm);
+}
+
+/* 渐变按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  border-radius: 40rpx;
+  padding: 20rpx 48rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+}
+
+.btn-outline {
+  border: 2rpx solid var(--primary);
+  color: var(--primary);
+  border-radius: 40rpx;
+  padding: 18rpx 44rpx;
+  font-size: 26rpx;
+  background: transparent;
+  text-align: center;
+}
+
+/* 排名样式 */
+.rank-num {
+  font-size: 36rpx;
+  font-weight: 800;
+  width: 56rpx;
+  text-align: center;
+}
+
+.rank-1 { color: #FFD700; }
+.rank-2 { color: #C0C0C0; }
+.rank-3 { color: #CD7F32; }
+.rank-other { color: var(--text-secondary); }
+
+/* 热度涨跌 */
+.trend-up {
+  color: var(--success);
+}
+
+.trend-down {
+  color: var(--warning);
+}
+
+.trend-flat {
+  color: var(--text-light);
+}
+
+.trend-new {
+  color: var(--accent);
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  background: rgba(240, 147, 251, 0.1);
+  border-radius: 8rpx;
+}
+
+/* 热度值 */
+.heat-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* 热度条 */
+.heat-bar {
+  height: 8rpx;
+  background: var(--border);
+  border-radius: 4rpx;
+  overflow: hidden;
+  margin-top: 8rpx;
+}
+
+.heat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
+}
+
+/* 平台标签 */
+.platform-tag {
+  display: inline-block;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+  color: #fff;
+  margin-right: 8rpx;
+}
+
+/* 状态标签 */
+.status-airing {
+  color: var(--success);
+  font-size: 22rpx;
+}
+
+.status-finished {
+  color: var(--text-light);
+  font-size: 22rpx;
+}
+
+.status-upcoming {
+  color: var(--primary);
+  font-size: 22rpx;
+}
+
+/* Tab切换 */
+.tab-bar {
+  display: flex;
+  padding: 8rpx;
+  background: var(--card);
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  border-radius: 12rpx;
+  transition: all 0.3s;
+}
+
+.tab-item.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 胶囊Tab */
+.capsule-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 0 24rpx;
+  margin-bottom: 20rpx;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.capsule-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.capsule-tab {
+  display: inline-block;
+  padding: 12rpx 28rpx;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  background: var(--card);
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.capsule-tab.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.4);
+}
+
+/* 搜索栏 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 40rpx;
+  padding: 16rpx 28rpx;
+  margin: 20rpx 24rpx;
+}
+
+.search-bar .icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 16rpx;
+  opacity: 0.7;
+}
+
+.search-bar .placeholder {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 分割线 */
+.divider {
+  height: 1rpx;
+  background: var(--border);
+  margin: 20rpx 0;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 40rpx;
+}
+
+.empty-state .icon {
+  width: 200rpx;
+  height: 200rpx;
+  margin-bottom: 32rpx;
+  opacity: 0.4;
+}
+
+.empty-state .text {
+  font-size: 28rpx;
+  color: var(--text-light);
+}
+
+/* 加载动画 */
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+}
+
+.loading-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  margin: 0 8rpx;
+  animation: pulse 1.4s infinite both;
+}
+
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* 数字格式化 */
+.num-large {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.num-unit {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-left: 4rpx;
+}
+
+/* 弹性布局辅助 */
+.flex { display: flex; }
+.flex-column { flex-direction: column; }
+.flex-center { align-items: center; justify-content: center; }
+.flex-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+
+/* 间距辅助 */
+.mt-sm { margin-top: 12rpx; }
+.mt-md { margin-top: 24rpx; }
+.mb-sm { margin-bottom: 12rpx; }
+.mb-md { margin-bottom: 24rpx; }
+.ml-sm { margin-left: 12rpx; }
+.mr-sm { margin-right: 12rpx; }

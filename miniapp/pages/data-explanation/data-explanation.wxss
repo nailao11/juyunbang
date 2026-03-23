@@ -1,0 +1,116 @@
+/* 数据说明样式 */
+
+.de-intro {
+  padding: 28rpx;
+}
+
+.de-intro-text {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.de-card {
+  padding: 28rpx;
+}
+
+.de-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.de-icon {
+  font-size: 32rpx;
+}
+
+.de-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.de-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.de-item {
+  padding-left: 16rpx;
+  border-left: 4rpx solid var(--primary);
+}
+
+.de-item-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.de-item-desc {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* FAQ */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.faq-item {
+  border-bottom: 1rpx solid var(--border);
+  padding: 20rpx 0;
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq-q {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+
+.faq-arrow {
+  font-size: 32rpx;
+  color: var(--text-light);
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.faq-arrow.open {
+  transform: rotate(90deg);
+}
+
+.faq-answer {
+  padding-top: 12rpx;
+}
+
+.faq-a {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.de-disclaimer {
+  padding: 32rpx 0;
+  text-align: center;
+}
+
+.disclaimer-text {
+  font-size: 22rpx;
+  color: var(--text-light);
+}

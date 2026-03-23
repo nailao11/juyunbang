@@ -1,0 +1,127 @@
+<!--pages/datacenter/datacenter.wxml - 数据中心-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- 日期选择器 -->
+  <view class="date-picker card">
+    <view class="date-nav" bindtap="prevDay">
+      <text class="date-arrow">‹</text>
+    </view>
+    <view class="date-center" bindtap="openDatePicker">
+      <text class="date-text">{{displayDate}}</text>
+      <text class="date-weekday">{{weekday}}</text>
+    </view>
+    <view class="date-nav {{isToday ? 'disabled' : ''}}" bindtap="nextDay">
+      <text class="date-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 主榜单Tab切换 -->
+  <view class="main-tabs">
+    <view class="main-tab {{mainTab === 'play' ? 'active' : ''}}"
+          bindtap="switchMainTab" data-tab="play">
+      <text class="main-tab-text">播放量榜</text>
+    </view>
+    <view class="main-tab {{mainTab === 'heat' ? 'active' : ''}}"
+          bindtap="switchMainTab" data-tab="heat">
+      <text class="main-tab-text">热度榜</text>
+    </view>
+    <view class="main-tab {{mainTab === 'power' ? 'active' : ''}}"
+          bindtap="switchMainTab" data-tab="power">
+      <text class="main-tab-text">剧力指数</text>
+    </view>
+    <view class="main-tab {{mainTab === 'discuss' ? 'active' : ''}}"
+          bindtap="switchMainTab" data-tab="discuss">
+      <text class="main-tab-text">讨论度榜</text>
+    </view>
+    <view class="main-tab-indicator" style="left: {{mainTabIndex * 25}}%;"></view>
+  </view>
+
+  <!-- 时间维度Tab -->
+  <view class="sub-tabs-row">
+    <view class="period-tabs">
+      <view class="period-tab {{periodTab === 'daily' ? 'active' : ''}}"
+            bindtap="switchPeriod" data-period="daily">日榜</view>
+      <view class="period-tab {{periodTab === 'weekly' ? 'active' : ''}}"
+            bindtap="switchPeriod" data-period="weekly">周榜</view>
+      <view class="period-tab {{periodTab === 'monthly' ? 'active' : ''}}"
+            bindtap="switchPeriod" data-period="monthly">月榜</view>
+    </view>
+    <view class="type-filter-tabs">
+      <view class="filter-tab {{typeFilter === '' ? 'active' : ''}}"
+            bindtap="switchTypeFilter" data-type="">全部</view>
+      <view class="filter-tab {{typeFilter === 'tv_drama' ? 'active' : ''}}"
+            bindtap="switchTypeFilter" data-type="tv_drama">电视剧</view>
+      <view class="filter-tab {{typeFilter === 'variety' ? 'active' : ''}}"
+            bindtap="switchTypeFilter" data-type="variety">综艺</view>
+    </view>
+  </view>
+
+  <!-- 排行榜列表 -->
+  <view class="rank-list container" wx:if="{{rankList.length > 0}}">
+    <view class="dc-rank-item card" wx:for="{{rankList}}" wx:key="id"
+          bindtap="goDetail" data-id="{{item.id}}">
+      <!-- 排名 -->
+      <view class="dc-rank-num-wrap">
+        <view class="dc-rank-medal" wx:if="{{index < 3}}">
+          <text class="medal-num rank-{{index + 1}}">{{index + 1}}</text>
+        </view>
+        <text class="dc-rank-num rank-other" wx:else>{{index + 1}}</text>
+      </view>
+
+      <!-- 海报 -->
+      <image class="dc-poster" src="{{item.poster_url || '/images/default/poster.png'}}"
+             mode="aspectFill" lazy-load></image>
+
+      <!-- 信息 -->
+      <view class="dc-info flex-1">
+        <text class="dc-title">{{item.title}}</text>
+        <view class="dc-meta">
+          <view class="platform-tag" style="background:{{item.platform_color || '#667eea'}}">
+            {{item.platform_name || '多平台'}}
+          </view>
+          <text class="dc-genre">{{item.genre || ''}}</text>
+        </view>
+        <view class="dc-data-row">
+          <text class="dc-data-value">{{item.value_display}}</text>
+          <view class="dc-trend">
+            <text class="trend-{{item.trend || 'flat'}}">
+              {{item.trend === 'up' ? '▲' : (item.trend === 'down' ? '▼' : '━')}}
+              {{item.change_display || ''}}
+            </text>
+          </view>
+        </view>
+        <!-- 数据条 -->
+        <view class="heat-bar">
+          <view class="heat-bar-fill" style="width: {{item.bar_width || 0}}%"></view>
+        </view>
+      </view>
+
+      <!-- 排名变化 -->
+      <view class="dc-rank-change" wx:if="{{item.rank_change !== undefined}}">
+        <text class="rank-change-text {{item.rank_change > 0 ? 'trend-up' : (item.rank_change < 0 ? 'trend-down' : 'trend-flat')}}">
+          {{item.rank_change > 0 ? '↑' + item.rank_change : (item.rank_change < 0 ? '↓' + (-item.rank_change) : '-')}}
+        </text>
+      </view>
+      <view class="dc-rank-change" wx:elif="{{item.is_new}}">
+        <text class="trend-new">NEW</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-dots" wx:if="{{loading}}">
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && rankList.length === 0}}">
+    <image src="/images/default/empty.png" class="icon" mode="aspectFit"></image>
+    <text class="text">该日期暂无榜单数据</text>
+    <text class="text" style="font-size:24rpx;margin-top:12rpx;">请选择其他日期查看</text>
+  </view>
+
+  <!-- 底部安全距离 -->
+  <view style="height: 120rpx;"></view>
+</view>

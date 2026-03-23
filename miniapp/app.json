@@ -1,0 +1,64 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/datacenter/datacenter",
+    "pages/discover/discover",
+    "pages/mine/mine",
+    "pages/drama-detail/drama-detail",
+    "pages/rank-detail/rank-detail",
+    "pages/compare/compare",
+    "pages/search/search",
+    "pages/tracking-list/tracking-list",
+    "pages/tracking-report/tracking-report",
+    "pages/notes/notes",
+    "pages/news-list/news-list",
+    "pages/news-detail/news-detail",
+    "pages/settings/settings",
+    "pages/about/about",
+    "pages/data-explanation/data-explanation",
+    "pages/feedback/feedback"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#667eea",
+    "navigationBarTitleText": "剧云榜",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f4f5f7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8898aa",
+    "selectedColor": "#667eea",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "热度",
+        "iconPath": "images/tabbar/hot.png",
+        "selectedIconPath": "images/tabbar/hot-active.png"
+      },
+      {
+        "pagePath": "pages/datacenter/datacenter",
+        "text": "数据",
+        "iconPath": "images/tabbar/data.png",
+        "selectedIconPath": "images/tabbar/data-active.png"
+      },
+      {
+        "pagePath": "pages/discover/discover",
+        "text": "发现",
+        "iconPath": "images/tabbar/discover.png",
+        "selectedIconPath": "images/tabbar/discover-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "images/tabbar/mine.png",
+        "selectedIconPath": "images/tabbar/mine-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "darkmode": true,
+  "lazyCodeLoading": "requiredComponents"
+}

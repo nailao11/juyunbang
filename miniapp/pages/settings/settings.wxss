@@ -1,0 +1,102 @@
+/* 设置页样式 */
+
+.settings-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.settings-group-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 24rpx 28rpx 8rpx;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx;
+  min-height: 48rpx;
+}
+
+.settings-label {
+  font-size: 30rpx;
+  color: var(--text);
+}
+
+.settings-value {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.settings-right {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.settings-divider {
+  height: 1rpx;
+  background: var(--border);
+  margin-left: 28rpx;
+}
+
+.picker-arrow {
+  font-size: 32rpx;
+  color: var(--text-light);
+}
+
+.settings-picker {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.picker-value {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.cache-size {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+/* 主题选项 */
+.theme-options {
+  display: flex;
+  background: var(--bg);
+  border-radius: 16rpx;
+  padding: 4rpx;
+}
+
+.theme-opt {
+  padding: 10rpx 20rpx;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  border-radius: 12rpx;
+  transition: all 0.3s;
+}
+
+.theme-opt.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 退出登录 */
+.logout-btn {
+  margin-top: 40rpx;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 28rpx;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.logout-text {
+  font-size: 30rpx;
+  color: var(--danger);
+  font-weight: 600;
+}

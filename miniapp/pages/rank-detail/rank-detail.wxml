@@ -1,0 +1,82 @@
+<!--pages/rank-detail/rank-detail.wxml - 榜单详情-->
+<view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
+
+  <!-- 榜单头部 -->
+  <view class="rd-header">
+    <view class="rd-header-bg"></view>
+    <view class="rd-header-content">
+      <text class="rd-header-title">{{rankTitle}}</text>
+      <text class="rd-header-desc">{{rankDesc}}</text>
+      <text class="rd-update" wx:if="{{updateTime}}">更新于 {{updateTime}}</text>
+    </view>
+  </view>
+
+  <!-- 排行列表 -->
+  <view class="rd-list container">
+    <!-- 前三名特殊展示 -->
+    <view class="rd-top3" wx:if="{{rankList.length >= 3}}">
+      <!-- 第二名 -->
+      <view class="rd-top-item rank-2nd" bindtap="goDetail" data-id="{{rankList[1].id}}">
+        <view class="top-rank-badge rank-2">2</view>
+        <image class="top-poster" src="{{rankList[1].poster_url || '/images/default/poster.png'}}"
+               mode="aspectFill"></image>
+        <text class="top-title">{{rankList[1].title}}</text>
+        <text class="top-value">{{rankList[1].value_display}}</text>
+      </view>
+
+      <!-- 第一名 -->
+      <view class="rd-top-item rank-1st" bindtap="goDetail" data-id="{{rankList[0].id}}">
+        <view class="top-crown">👑</view>
+        <view class="top-rank-badge rank-1">1</view>
+        <image class="top-poster" src="{{rankList[0].poster_url || '/images/default/poster.png'}}"
+               mode="aspectFill"></image>
+        <text class="top-title">{{rankList[0].title}}</text>
+        <text class="top-value">{{rankList[0].value_display}}</text>
+      </view>
+
+      <!-- 第三名 -->
+      <view class="rd-top-item rank-3rd" bindtap="goDetail" data-id="{{rankList[2].id}}">
+        <view class="top-rank-badge rank-3">3</view>
+        <image class="top-poster" src="{{rankList[2].poster_url || '/images/default/poster.png'}}"
+               mode="aspectFill"></image>
+        <text class="top-title">{{rankList[2].title}}</text>
+        <text class="top-value">{{rankList[2].value_display}}</text>
+      </view>
+    </view>
+
+    <!-- 第4名起的列表 -->
+    <view class="rd-item card" wx:for="{{rankList}}" wx:key="id"
+          wx:if="{{index >= 3}}" bindtap="goDetail" data-id="{{item.id}}">
+      <text class="rd-rank-num rank-other">{{index + 1}}</text>
+      <image class="rd-poster" src="{{item.poster_url || '/images/default/poster.png'}}"
+             mode="aspectFill" lazy-load></image>
+      <view class="rd-info flex-1">
+        <text class="rd-title">{{item.title}}</text>
+        <view class="rd-meta">
+          <view class="platform-tag" style="background:{{item.platform_color || '#667eea'}}"
+                wx:if="{{item.platform_name}}">{{item.platform_name}}</view>
+          <text class="rd-genre">{{item.genre || ''}}</text>
+        </view>
+        <view class="heat-bar">
+          <view class="heat-bar-fill" style="width: {{item.bar_width || 0}}%"></view>
+        </view>
+      </view>
+      <view class="rd-value-wrap">
+        <text class="heat-value">{{item.value_display}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-dots" wx:if="{{loading}}">
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && rankList.length === 0}}">
+    <image src="/images/default/empty.png" class="icon" mode="aspectFit"></image>
+    <text class="text">暂无榜单数据</text>
+  </view>
+</view>
