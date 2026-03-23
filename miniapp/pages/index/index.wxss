@@ -1,0 +1,225 @@
+/* 首页样式 */
+
+/* 顶部渐变头部 */
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20rpx 0 40rpx;
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.header-content {
+  text-align: center;
+  padding: 20rpx 0 16rpx;
+}
+
+.header-title {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 4rpx;
+}
+
+.header-subtitle {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 8rpx;
+}
+
+/* 搜索栏 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 40rpx;
+  padding: 18rpx 28rpx;
+  margin: 16rpx 32rpx 0;
+}
+
+.search-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 16rpx;
+}
+
+.search-placeholder {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* 更新提示 */
+.update-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.update-dot {
+  display: inline-block;
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--success);
+  margin-right: 12rpx;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.refresh-btn {
+  margin-left: 16rpx;
+  padding: 8rpx;
+}
+
+.refresh-icon {
+  width: 28rpx;
+  height: 28rpx;
+  opacity: 0.5;
+}
+
+/* 平台滚动 */
+.platform-scroll {
+  white-space: nowrap;
+  padding: 8rpx 0;
+}
+
+/* 类型Tab */
+.type-tabs {
+  display: flex;
+  padding: 0 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.type-tab {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.type-tab.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.type-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 2rpx;
+}
+
+/* 排行列表 */
+.rank-list {
+  padding: 0 24rpx;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.rank-num-wrap {
+  width: 60rpx;
+  flex-shrink: 0;
+}
+
+.rank-num {
+  font-size: 36rpx;
+  font-weight: 800;
+  text-align: center;
+  display: block;
+}
+
+.rank-1 {
+  color: transparent;
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  -webkit-background-clip: text;
+  font-size: 44rpx;
+}
+
+.rank-2 {
+  color: transparent;
+  background: linear-gradient(180deg, #E8E8E8, #A0A0A0);
+  -webkit-background-clip: text;
+  font-size: 40rpx;
+}
+
+.rank-3 {
+  color: transparent;
+  background: linear-gradient(180deg, #CD7F32, #8B5E3C);
+  -webkit-background-clip: text;
+  font-size: 38rpx;
+}
+
+.rank-other {
+  color: var(--text-light);
+  font-size: 32rpx;
+}
+
+/* 海报缩略图 */
+.rank-poster {
+  width: 80rpx;
+  height: 110rpx;
+  border-radius: 12rpx;
+  margin: 0 20rpx;
+  flex-shrink: 0;
+  background: var(--border);
+}
+
+/* 剧集信息 */
+.rank-info {
+  overflow: hidden;
+}
+
+.rank-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.rank-episode {
+  font-size: 22rpx;
+  color: var(--text-light);
+}
+
+/* 热度值区域 */
+.rank-heat-wrap {
+  flex-shrink: 0;
+  text-align: right;
+  margin-left: 16rpx;
+  min-width: 120rpx;
+}
+
+.trend-wrap {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+}
