@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 from loguru import logger
 
 from .base_crawler import BaseCrawler
@@ -13,9 +12,10 @@ class IqiyiCrawler(BaseCrawler):
         super().__init__('爱奇艺')
 
     def crawl(self):
-        """采集爱奇艺风云榜热度数据"""
+        """采集爱奇艺风云榜热度数据，并保存到数据库"""
         logger.info("[爱奇艺] 开始采集热度数据...")
         results = []
+        saved_count = 0
 
         try:
             # 电视剧热度榜
@@ -26,8 +26,30 @@ class IqiyiCrawler(BaseCrawler):
             variety_data = self._crawl_rank('variety')
             results.extend(variety_data)
 
-            self.log_task('iqiyi_heat', 'success', len(results))
-            logger.info(f"[爱奇艺] 采集完成，共{len(results)}条数据")
+            # 匹配剧名并保存到数据库
+            for item in results:
+                drama_id = self._match_drama(item['title'])
+                if drama_id:
+                    try:
+                        self.save_heat_data(
+                            drama_id=drama_id,
+                            platform_id=self.PLATFORM_ID,
+                            heat_value=item['heat_value'],
+                            heat_rank=item.get('rank'),
+                        )
+                        saved_count += 1
+                        logger.debug(
+                            f"[爱奇艺] 保存成功: {item['title']} "
+                            f"热度={item['heat_value']} 排名={item.get('rank')}"
+                        )
+                    except Exception as e:
+                        logger.error(f"[爱奇艺] 保存失败 {item['title']}: {e}")
+
+            self.log_task('iqiyi_heat', 'success', saved_count)
+            logger.info(
+                f"[爱奇艺] 采集完成，共{len(results)}条数据，"
+                f"成功匹配并保存{saved_count}条"
+            )
 
         except Exception as e:
             logger.error(f"[爱奇艺] 采集异常: {e}")

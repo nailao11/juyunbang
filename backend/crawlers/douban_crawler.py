@@ -11,7 +11,7 @@ class DoubanCrawler(BaseCrawler):
         super().__init__('豆瓣')
 
     def crawl(self):
-        """采集豆瓣评分数据"""
+        """采集豆瓣评分数据并更新到数据库"""
         logger.info("[豆瓣] 开始采集评分数据...")
         results = []
 
@@ -29,6 +29,10 @@ class DoubanCrawler(BaseCrawler):
                     score_data['drama_id'] = drama['id']
                     score_data['title'] = drama['title']
                     results.append(score_data)
+
+            # 采集完成后立即更新评分到数据库
+            if results:
+                self.update_scores(results)
 
             self.log_task('douban_score', 'success', len(results))
             logger.info(f"[豆瓣] 采集完成，共{len(results)}条数据")
@@ -57,6 +61,9 @@ class DoubanCrawler(BaseCrawler):
             votes_el = soup.select_one('[property="v:votes"]')
             votes = int(votes_el.get_text(strip=True)) if votes_el else 0
 
+            if score is not None:
+                logger.debug(f"[豆瓣] {douban_id}: 评分={score}, 人数={votes}")
+
             return {
                 'douban_id': douban_id,
                 'score': score,
@@ -71,10 +78,17 @@ class DoubanCrawler(BaseCrawler):
         """更新数据库中的豆瓣评分"""
         from app.utils.db import execute
 
+        updated = 0
         for item in results:
             if item.get('score'):
-                execute(
-                    "UPDATE dramas SET douban_score = %s, douban_votes = %s WHERE id = %s",
-                    (item['score'], item['votes'], item['drama_id'])
-                )
-                logger.info(f"[豆瓣] 更新 {item['title']} 评分: {item['score']}")
+                try:
+                    execute(
+                        "UPDATE dramas SET douban_score = %s, douban_votes = %s WHERE id = %s",
+                        (item['score'], item['votes'], item['drama_id'])
+                    )
+                    updated += 1
+                    logger.info(f"[豆瓣] 更新 {item['title']} 评分: {item['score']}")
+                except Exception as e:
+                    logger.error(f"[豆瓣] 更新评分失败 {item['title']}: {e}")
+
+        logger.info(f"[豆瓣] 共更新{updated}条评分数据")

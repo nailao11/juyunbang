@@ -29,10 +29,16 @@ def job_crawl_heat():
     try:
         from crawlers.iqiyi_crawler import IqiyiCrawler
         from crawlers.bilibili_crawler import BilibiliCrawler
+        from crawlers.youku_crawler import YoukuCrawler
+        from crawlers.tencent_crawler import TencentCrawler
+        from crawlers.mgtv_crawler import MgtvCrawler
 
         crawlers = [
             IqiyiCrawler(),
             BilibiliCrawler(),
+            YoukuCrawler(),
+            TencentCrawler(),
+            MgtvCrawler(),
         ]
 
         for crawler in crawlers:
@@ -99,8 +105,7 @@ def job_crawl_douban():
     try:
         from crawlers.douban_crawler import DoubanCrawler
         crawler = DoubanCrawler()
-        results = crawler.crawl()
-        crawler.update_scores(results)
+        crawler.crawl()
     except Exception as e:
         logger.error(f"豆瓣评分更新异常: {e}")
 

@@ -12,17 +12,48 @@ class BilibiliCrawler(BaseCrawler):
         super().__init__('哔哩哔哩')
 
     def crawl(self):
-        """采集B站排行榜"""
+        """采集B站排行榜，匹配剧名并保存到数据库"""
         logger.info("[B站] 开始采集数据...")
         results = []
+        saved_count = 0
 
         try:
             # B站有公开API
             data = self._crawl_rank()
             results.extend(data)
 
-            self.log_task('bilibili_heat', 'success', len(results))
-            logger.info(f"[B站] 采集完成，共{len(results)}条数据")
+            # 匹配剧名并保存
+            for item in results:
+                drama_id = self._match_drama(item['title'])
+                if drama_id:
+                    try:
+                        # 保存热度数据（播放量作为热度值）
+                        self.save_heat_data(
+                            drama_id=drama_id,
+                            platform_id=self.PLATFORM_ID,
+                            heat_value=item['heat_value'],
+                            heat_rank=item.get('rank'),
+                        )
+                        # B站有播放量数据，额外保存播放量快照
+                        if item.get('heat_value'):
+                            self.save_playcount(
+                                drama_id=drama_id,
+                                platform_id=self.PLATFORM_ID,
+                                total_playcount=item['heat_value'],
+                            )
+                        saved_count += 1
+                        logger.debug(
+                            f"[B站] 保存成功: {item['title']} "
+                            f"播放={item['heat_value']} 追番={item.get('follow_count')}"
+                        )
+                    except Exception as e:
+                        logger.error(f"[B站] 保存失败 {item['title']}: {e}")
+
+            self.log_task('bilibili_heat', 'success', saved_count)
+            logger.info(
+                f"[B站] 采集完成，共{len(results)}条数据，"
+                f"成功匹配并保存{saved_count}条"
+            )
 
         except Exception as e:
             logger.error(f"[B站] 采集异常: {e}")
