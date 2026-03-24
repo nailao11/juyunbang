@@ -12,16 +12,46 @@ class MgtvCrawler(BaseCrawler):
         super().__init__('芒果TV')
 
     def crawl(self):
-        """采集芒果TV热播榜"""
+        """采集芒果TV热播榜，匹配剧名并保存到数据库"""
         logger.info("[芒果TV] 开始采集热度数据...")
         results = []
+        saved_count = 0
 
         try:
             data = self._crawl_rank()
             results.extend(data)
 
-            self.log_task('mgtv_heat', 'success', len(results))
-            logger.info(f"[芒果TV] 采集完成，共{len(results)}条数据")
+            # 匹配剧名并保存
+            for item in results:
+                drama_id = self._match_drama(item['title'])
+                if drama_id:
+                    try:
+                        self.save_heat_data(
+                            drama_id=drama_id,
+                            platform_id=self.PLATFORM_ID,
+                            heat_value=item['heat_value'],
+                            heat_rank=item.get('rank'),
+                        )
+                        # 芒果TV的playcnt可作为播放量快照
+                        if item.get('heat_value'):
+                            self.save_playcount(
+                                drama_id=drama_id,
+                                platform_id=self.PLATFORM_ID,
+                                total_playcount=item['heat_value'],
+                            )
+                        saved_count += 1
+                        logger.debug(
+                            f"[芒果TV] 保存成功: {item['title']} "
+                            f"热度={item['heat_value']} 排名={item.get('rank')}"
+                        )
+                    except Exception as e:
+                        logger.error(f"[芒果TV] 保存失败 {item['title']}: {e}")
+
+            self.log_task('mgtv_heat', 'success', saved_count)
+            logger.info(
+                f"[芒果TV] 采集完成，共{len(results)}条数据，"
+                f"成功匹配并保存{saved_count}条"
+            )
 
         except Exception as e:
             logger.error(f"[芒果TV] 采集异常: {e}")

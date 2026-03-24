@@ -77,10 +77,8 @@ Page({
   async loadCompareData() {
     this.setData({ loading: true })
     try {
-      const data = await api.get('/compare', {
-        drama_a: this.data.dramaA.id,
-        drama_b: this.data.dramaB.id,
-        dimension: this.data.compareTab
+      const data = await api.get('/heat/realtime/compare', {
+        drama_ids: this.data.dramaA.id + ',' + this.data.dramaB.id
       })
 
       // 格式化对比指标

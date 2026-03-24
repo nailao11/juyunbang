@@ -34,7 +34,7 @@ Page({
   // 加载用户信息
   async loadUserInfo() {
     try {
-      const data = await api.get('/user/profile', {}, true)
+      const data = await api.get('/auth/profile', {}, true)
       this.setData({ userInfo: data || {} })
     } catch (e) {
       // 未登录时使用本地缓存
@@ -48,7 +48,7 @@ Page({
   // 加载追剧统计
   async loadTrackingStats() {
     try {
-      const data = await api.get('/user/tracking/stats', {}, true)
+      const data = await api.get('/tracking/stats', {}, true)
       const stats = data || { watching: 0, want: 0, watched: 0 }
       const total = stats.watching + stats.want + stats.watched
       const max = Math.max(total, 1)
@@ -73,7 +73,7 @@ Page({
         this.setData({ userInfo })
         wx.setStorageSync('userInfo', userInfo)
         // 同步到服务器
-        api.post('/user/profile', {
+        api.post('/auth/profile', {
           nickname: userInfo.nickName,
           avatar: userInfo.avatarUrl
         }).catch(() => {})
@@ -95,7 +95,7 @@ Page({
         this.setData({ 'userInfo.avatar': tempPath })
         // 上传头像
         wx.uploadFile({
-          url: app.globalData.baseUrl + '/user/avatar',
+          url: app.globalData.baseUrl + '/auth/avatar',
           filePath: tempPath,
           name: 'avatar',
           header: {

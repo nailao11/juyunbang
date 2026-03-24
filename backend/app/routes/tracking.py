@@ -38,6 +38,58 @@ def tracking_list():
     return success(items)
 
 
+@tracking_bp.route('/status/<int:drama_id>', methods=['GET'])
+@jwt_required()
+def tracking_status(drama_id):
+    """获取某剧的追剧状态"""
+    user_id = get_jwt_identity()
+    record = query_one(
+        "SELECT status, current_episode, user_score, started_at, updated_at "
+        "FROM user_tracking WHERE user_id = %s AND drama_id = %s",
+        (user_id, drama_id)
+    )
+    if not record:
+        return success({'status': '', 'tracked': False})
+    record['tracked'] = True
+    return success(record)
+
+
+@tracking_bp.route('/expect/<int:drama_id>', methods=['POST'])
+@jwt_required()
+def expect_add(drama_id):
+    """期待待播剧"""
+    user_id = get_jwt_identity()
+    existing = query_one(
+        "SELECT id FROM user_tracking WHERE user_id = %s AND drama_id = %s",
+        (user_id, drama_id)
+    )
+    if existing:
+        execute(
+            "UPDATE user_tracking SET status = 'want_to_watch', updated_at = NOW() "
+            "WHERE user_id = %s AND drama_id = %s",
+            (user_id, drama_id)
+        )
+    else:
+        insert(
+            "INSERT INTO user_tracking (user_id, drama_id, status, started_at) "
+            "VALUES (%s, %s, 'want_to_watch', CURDATE())",
+            (user_id, drama_id)
+        )
+    return success(message='已加入期待')
+
+
+@tracking_bp.route('/expect/<int:drama_id>', methods=['DELETE'])
+@jwt_required()
+def expect_remove(drama_id):
+    """取消期待"""
+    user_id = get_jwt_identity()
+    execute(
+        "DELETE FROM user_tracking WHERE user_id = %s AND drama_id = %s AND status = 'want_to_watch'",
+        (user_id, drama_id)
+    )
+    return success(message='已取消期待')
+
+
 @tracking_bp.route('/add', methods=['POST'])
 @jwt_required()
 def tracking_add():

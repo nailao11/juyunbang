@@ -115,6 +115,27 @@ def genres():
     return success(genre_list)
 
 
+@search_bp.route('/discover/upcoming', methods=['GET'])
+def upcoming():
+    """待播期待榜"""
+    cache_key = "discover:upcoming"
+    cached = cache_get(cache_key)
+    if cached:
+        return success(cached)
+
+    sql = """
+        SELECT id, title, type, genre, poster_url, douban_score,
+               status, air_date, total_episodes, director, cast_main
+        FROM dramas
+        WHERE status = 'upcoming' AND air_date >= CURDATE()
+        ORDER BY air_date ASC
+        LIMIT 30
+    """
+    items = query(sql)
+    cache_set(cache_key, items, expire=3600)
+    return success(items)
+
+
 @search_bp.route('/discover/by-genre', methods=['GET'])
 def by_genre():
     """按类型浏览"""

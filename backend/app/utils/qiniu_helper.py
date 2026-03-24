@@ -45,3 +45,13 @@ def upload_data(data, key):
 
 def get_file_url(key):
     return f"https://{Config.QINIU_DOMAIN}/{key}"
+
+
+def upload_flask_file(file_storage, prefix='uploads'):
+    """上传Flask FileStorage对象到七牛云"""
+    import uuid
+    import os
+    ext = os.path.splitext(file_storage.filename)[1] or '.jpg'
+    key = f"{prefix}/{uuid.uuid4().hex}{ext}"
+    data = file_storage.read()
+    return upload_data(data, key)

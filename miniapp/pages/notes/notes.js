@@ -53,7 +53,7 @@ Page({
     if (!append) this.setData({ loading: true })
 
     try {
-      const data = await api.get('/user/notes', {
+      const data = await api.get('/notes/list', {
         page: this.data.page,
         limit: 20
       }, true)
@@ -172,7 +172,7 @@ Page({
         try {
           const uploadRes = await new Promise((resolve, reject) => {
             wx.uploadFile({
-              url: app.globalData.baseUrl + '/upload/image',
+              url: app.globalData.baseUrl + '/system/upload/image',
               filePath: path,
               name: 'file',
               header: { 'Authorization': 'Bearer ' + (app.globalData.token || '') },
@@ -196,9 +196,9 @@ Page({
       }
 
       if (this.data.editingNoteId) {
-        await api.put(`/user/notes/${this.data.editingNoteId}`, noteData)
+        await api.put(`/notes/${this.data.editingNoteId}`, noteData)
       } else {
-        await api.post('/user/notes', noteData)
+        await api.post('/notes', noteData)
       }
 
       wx.hideLoading()
@@ -222,7 +222,7 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           try {
-            await api.del(`/user/notes/${id}`)
+            await api.del(`/notes/${id}`)
             wx.showToast({ title: '已删除', icon: 'success' })
             this.setData({ page: 1 })
             this.loadNotes()

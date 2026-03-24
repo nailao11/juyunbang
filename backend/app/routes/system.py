@@ -131,6 +131,25 @@ def submit_feedback():
     return success(message='感谢您的反馈！')
 
 
+@system_bp.route('/upload/image', methods=['POST'])
+@jwt_required()
+def upload_image():
+    """上传图片"""
+    if 'file' not in request.files:
+        return success({'url': ''})
+
+    file = request.files['file']
+    if not file.filename:
+        return success({'url': ''})
+
+    try:
+        from ..utils.qiniu_helper import upload_flask_file
+        url = upload_flask_file(file, prefix='images')
+        return success({'url': url or ''})
+    except Exception as e:
+        return success({'url': ''})
+
+
 @system_bp.route('/upload-token', methods=['GET'])
 @jwt_required()
 def upload_token():

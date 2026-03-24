@@ -57,7 +57,7 @@ Page({
   // 加载统计数
   async loadCounts() {
     try {
-      const data = await api.get('/user/tracking/stats', {}, true)
+      const data = await api.get('/tracking/stats', {}, true)
       this.setData({
         counts: {
           watching: data.watching || 0,
@@ -76,7 +76,7 @@ Page({
     if (!append) this.setData({ loading: true })
 
     try {
-      const data = await api.get('/user/tracking/list', {
+      const data = await api.get('/tracking/list', {
         status: this.data.activeTab,
         page: this.data.page,
         limit: 20
@@ -128,7 +128,7 @@ Page({
       success: async (res) => {
         const newEp = (current || 0) + res.tapIndex + 1
         try {
-          await api.put(`/user/tracking/${id}`, { current_ep: newEp })
+          await api.put(`/tracking/${id}`, { current_ep: newEp })
           wx.showToast({ title: `已更新到第${newEp}集`, icon: 'success' })
           this.loadList()
         } catch (e) {
@@ -142,7 +142,7 @@ Page({
   async startWatching(e) {
     const id = e.currentTarget.dataset.id
     try {
-      await api.put(`/user/tracking/${id}`, { status: 'watching' })
+      await api.put(`/tracking/${id}`, { status: 'watching' })
       wx.showToast({ title: '已开始追剧', icon: 'success' })
       this.loadCounts()
       this.loadList()
@@ -160,7 +160,7 @@ Page({
       success: async (res) => {
         if (res.confirm) {
           try {
-            await api.del(`/user/tracking/${id}`)
+            await api.del(`/tracking/${id}`)
             wx.showToast({ title: '已移除', icon: 'success' })
             this.loadCounts()
             this.loadList()

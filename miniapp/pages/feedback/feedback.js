@@ -72,7 +72,7 @@ Page({
         try {
           const uploadRes = await new Promise((resolve, reject) => {
             wx.uploadFile({
-              url: app.globalData.baseUrl + '/upload/image',
+              url: app.globalData.baseUrl + '/system/upload/image',
               filePath: path,
               name: 'file',
               header: { 'Authorization': 'Bearer ' + (app.globalData.token || '') },
@@ -88,7 +88,7 @@ Page({
         }
       }
 
-      await api.post('/feedback', {
+      await api.post('/system/feedback', {
         type: this.data.feedbackType,
         content: this.data.content,
         contact: this.data.contact,
