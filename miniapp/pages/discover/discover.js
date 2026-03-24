@@ -50,7 +50,7 @@ Page({
   // 高分推荐
   async loadHighScore() {
     try {
-      const data = await api.get('/discover/high-score', { limit: 10 })
+      const data = await api.get('/search/discover/high-rated', { limit: 10 })
       this.setData({ highScoreList: data.list || data || [] })
     } catch (e) {
       console.error('加载高分推荐失败', e)
@@ -60,7 +60,7 @@ Page({
   // 冷门佳作
   async loadHiddenGems() {
     try {
-      const data = await api.get('/discover/hidden-gems', { limit: 10 })
+      const data = await api.get('/search/discover/hidden-gems', { limit: 10 })
       this.setData({ hiddenGemList: data.list || data || [] })
     } catch (e) {
       console.error('加载冷门佳作失败', e)
@@ -70,7 +70,7 @@ Page({
   // 待播期待榜
   async loadUpcoming() {
     try {
-      const data = await api.get('/discover/upcoming', { limit: 10 })
+      const data = await api.get('/search/discover/upcoming', { limit: 10 })
       this.setData({ upcomingList: data.list || data || [] })
     } catch (e) {
       console.error('加载待播期待榜失败', e)
@@ -94,7 +94,7 @@ Page({
   async loadGenreData(genre) {
     this.setData({ loading: true })
     try {
-      const data = await api.get('/discover/by-genre', { genre, limit: 10 })
+      const data = await api.get('/search/discover/by-genre', { genre, limit: 10 })
       this.setData({
         highScoreList: data.high_score || [],
         hiddenGemList: data.hidden_gems || [],
@@ -114,9 +114,9 @@ Page({
 
     try {
       if (item.is_expected) {
-        await api.del(`/user/expect/${id}`)
+        await api.del(`/tracking/expect/${id}`)
       } else {
-        await api.post(`/user/expect/${id}`)
+        await api.post(`/tracking/expect/${id}`)
       }
 
       const list = this.data.upcomingList.map(i => {

@@ -7,6 +7,28 @@ from ..utils.response import success, error
 notes_bp = Blueprint('notes', __name__)
 
 
+@notes_bp.route('/list', methods=['GET'])
+@jwt_required()
+def list_all_notes():
+    """获取当前用户的所有笔记"""
+    user_id = get_jwt_identity()
+    page = max(int(request.args.get('page', 1)), 1)
+    limit = min(int(request.args.get('limit', 20)), 50)
+    offset = (page - 1) * limit
+
+    notes = query(
+        "SELECT n.id, n.drama_id, n.episode_number, n.content, n.is_private, "
+        "n.created_at, n.updated_at, d.title as drama_title, d.poster_url "
+        "FROM user_notes n "
+        "LEFT JOIN dramas d ON n.drama_id = d.id "
+        "WHERE n.user_id = %s "
+        "ORDER BY n.updated_at DESC "
+        "LIMIT %s OFFSET %s",
+        (user_id, limit, offset)
+    )
+    return success({'list': notes, 'page': page})
+
+
 @notes_bp.route('/<int:drama_id>', methods=['GET'])
 @jwt_required()
 def get_notes(drama_id):

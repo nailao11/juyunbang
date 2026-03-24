@@ -4,11 +4,11 @@ const { formatNumber, formatHeat } = require('../../utils/format')
 const app = getApp()
 
 const RANK_CONFIG = {
-  highscore: { title: '高分推荐', desc: '豆瓣高分剧集榜单', api: '/discover/high-score' },
-  'hidden-gem': { title: '冷门佳作', desc: '值得一看的宝藏剧集', api: '/discover/hidden-gems' },
-  upcoming: { title: '待播期待榜', desc: '最受期待的待播剧集', api: '/discover/upcoming' },
-  heat: { title: '热度总榜', desc: '全平台实时热度排行', api: '/rank/heat' },
-  play: { title: '播放量总榜', desc: '全平台累计播放排行', api: '/rank/play' }
+  highscore: { title: '高分推荐', desc: '豆瓣高分剧集榜单', api: '/search/discover/high-rated' },
+  'hidden-gem': { title: '冷门佳作', desc: '值得一看的宝藏剧集', api: '/search/discover/hidden-gems' },
+  upcoming: { title: '待播期待榜', desc: '最受期待的待播剧集', api: '/search/discover/upcoming' },
+  heat: { title: '热度总榜', desc: '全平台实时热度排行', api: '/daily/heat-rank' },
+  play: { title: '播放量总榜', desc: '全平台累计播放排行', api: '/daily/play-rank' }
 }
 
 Page({

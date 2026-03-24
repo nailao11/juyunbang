@@ -4,10 +4,10 @@ const { formatNumber, formatHeat, formatChange, formatFullDate, getWeekDay } = r
 const app = getApp()
 
 const TAB_MAP = {
-  play: { api: '/rank/play', label: '播放量' },
-  heat: { api: '/rank/heat', label: '热度' },
-  power: { api: '/rank/power', label: '剧力指数' },
-  discuss: { api: '/rank/discuss', label: '讨论度' }
+  play: { api: '/daily/play-rank', label: '播放量' },
+  heat: { api: '/daily/heat-rank', label: '热度' },
+  power: { api: '/daily/index-rank', label: '剧力指数' },
+  discuss: { api: '/daily/social-rank', label: '讨论度' }
 }
 
 const TAB_INDEX = { play: 0, heat: 1, power: 2, discuss: 3 }

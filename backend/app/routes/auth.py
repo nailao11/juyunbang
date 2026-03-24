@@ -103,7 +103,7 @@ def get_profile():
     return success(user)
 
 
-@auth_bp.route('/profile', methods=['PUT'])
+@auth_bp.route('/profile', methods=['PUT', 'POST'])
 @jwt_required()
 def update_profile():
     """更新用户信息"""
@@ -127,3 +127,32 @@ def update_profile():
     execute(sql, tuple(params))
 
     return success(message='更新成功')
+
+
+@auth_bp.route('/avatar', methods=['POST'])
+@jwt_required()
+def upload_avatar():
+    """上传头像"""
+    user_id = get_jwt_identity()
+
+    if 'avatar' not in request.files:
+        return error('未上传文件', 400)
+
+    file = request.files['avatar']
+    if not file.filename:
+        return error('文件名为空', 400)
+
+    # 尝试上传到七牛云
+    try:
+        from ..utils.qiniu_helper import upload_flask_file
+        url = upload_flask_file(file, prefix='avatars')
+        if url:
+            execute(
+                "UPDATE users SET avatar_url = %s WHERE id = %s",
+                (url, user_id)
+            )
+            return success({'url': url}, message='头像更新成功')
+    except Exception as e:
+        logger.error(f"头像上传失败: {e}")
+
+    return error('头像上传失败', 500)

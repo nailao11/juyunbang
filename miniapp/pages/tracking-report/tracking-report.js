@@ -33,7 +33,7 @@ Page({
   async loadReport() {
     this.setData({ loading: true })
     try {
-      const data = await api.get('/user/tracking/report', {}, true)
+      const data = await api.get('/tracking/report/monthly', {}, true)
 
       // 处理类型偏好百分比
       if (data.genre_stats) {

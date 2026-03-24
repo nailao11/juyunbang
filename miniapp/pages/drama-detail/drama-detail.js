@@ -32,10 +32,6 @@ Page({
 
     if (options.id) {
       this.loadDramaDetail(options.id)
-      this.loadHeatData(options.id)
-      this.loadPowerData(options.id)
-      this.loadPlayData(options.id)
-      this.loadSocialData(options.id)
       this.loadRelated(options.id)
       this.loadTrackingStatus(options.id)
     }
@@ -49,7 +45,7 @@ Page({
     this.setData({ scrolled: e.scrollTop > 200 })
   },
 
-  // 加载剧集详情
+  // 加载剧集详情（包含热度、指数、播放量、社交数据）
   async loadDramaDetail(id) {
     try {
       const data = await api.get(`/drama/${id}`)
@@ -65,82 +61,84 @@ Page({
 
       // 更新标题
       wx.setNavigationBarTitle({ title: data.title || '剧集详情' })
+
+      // 从详情接口返回的数据中提取热度数据
+      this._processHeatData(data.current_heat)
+      // 提取剧力指数
+      this._processPowerData(data.drama_index)
+      // 提取播放量数据
+      this._processPlayData(data.play_data)
+      // 提取社交媒体数据
+      this._processSocialData(data.social_data)
     } catch (e) {
       console.error('加载剧集详情失败', e)
       wx.showToast({ title: '加载失败', icon: 'none' })
     }
   },
 
-  // 加载实时热度
-  async loadHeatData(id) {
-    try {
-      const data = await api.get(`/drama/${id}/heat`)
-      this.setData({
-        heatData: {
-          current: formatHeat(data.current_heat),
-          today_peak: formatHeat(data.today_peak),
-          rank: data.rank,
-          trend: data.trend || 'flat',
-          change_display: data.change_pct ? formatChange(data.change_pct) : '-'
-        }
-      })
-    } catch (e) {
-      console.error('加载热度数据失败', e)
+  // 处理热度数据
+  _processHeatData(heatList) {
+    if (!heatList || heatList.length === 0) {
+      this.setData({ heatData: {} })
+      return
     }
+    // 取最高热度平台的数据
+    const top = heatList[0]
+    this.setData({
+      heatData: {
+        current: formatHeat(top.heat_value),
+        today_peak: formatHeat(top.heat_value),
+        rank: top.heat_rank || '-',
+        trend: 'flat',
+        change_display: '-',
+        platforms: heatList.map(h => ({
+          name: h.platform_name || h.name,
+          value: formatHeat(h.heat_value),
+          color: h.color || '#667eea'
+        }))
+      }
+    })
   },
 
-  // 加载剧力指数
-  async loadPowerData(id) {
-    try {
-      const data = await api.get(`/drama/${id}/power-index`)
-      this.setData({
-        powerData: {
-          total: data.total || 0,
-          dimensions: data.dimensions || [
-            { name: '热度', value: data.heat_score || 0 },
-            { name: '口碑', value: data.reputation_score || 0 },
-            { name: '播放', value: data.play_score || 0 },
-            { name: '讨论', value: data.discuss_score || 0 },
-            { name: '媒体', value: data.media_score || 0 }
-          ]
-        }
-      })
-    } catch (e) {
-      console.error('加载剧力指数失败', e)
+  // 处理剧力指数数据
+  _processPowerData(indexData) {
+    if (!indexData) {
+      this.setData({ powerData: { total: 0, dimensions: [] } })
+      return
     }
+    this.setData({
+      powerData: {
+        total: indexData.index_total || 0,
+        dimensions: [
+          { name: '热度', value: indexData.index_heat || 0 },
+          { name: '口碑', value: indexData.index_reputation || 0 },
+          { name: '播放', value: indexData.index_playcount || 0 },
+          { name: '讨论', value: indexData.index_social || 0 }
+        ]
+      }
+    })
   },
 
-  // 加载播放量
-  async loadPlayData(id) {
-    try {
-      const data = await api.get(`/drama/${id}/play`)
-      this.setData({
-        playData: {
-          total_display: formatNumber(data.total_play),
-          today_display: formatNumber(data.today_play),
-          avg_display: formatNumber(data.avg_daily_play),
-          change_pct: data.change_pct ? formatChange(data.change_pct) : '-',
-          trend: data.trend || 'flat'
-        }
-      })
-    } catch (e) {
-      console.error('加载播放数据失败', e)
+  // 处理播放量数据
+  _processPlayData(playData) {
+    if (!playData) {
+      this.setData({ playData: {} })
+      return
     }
+    this.setData({
+      playData: {
+        total_display: formatNumber(playData.total_play),
+        today_display: formatNumber(playData.latest_daily_play),
+        avg_display: formatNumber(playData.avg_episode_play),
+        change_pct: '-',
+        trend: 'flat'
+      }
+    })
   },
 
-  // 加载社交媒体数据
-  async loadSocialData(id) {
-    try {
-      const data = await api.get(`/drama/${id}/social`)
-      const list = (data.list || data || []).map(item => ({
-        ...item,
-        value_display: formatNumber(item.value),
-        change_display: item.change_pct ? formatChange(item.change_pct) : '-'
-      }))
-      this.setData({ socialData: list })
-    } catch (e) {
-      console.error('加载社交数据失败', e)
-      // 设置默认数据
+  // 处理社交媒体数据
+  _processSocialData(socialData) {
+    if (!socialData) {
       this.setData({
         socialData: [
           { platform: '微博', icon: '微', color: '#E6162D', metric: '话题阅读', value_display: '-', trend: 'flat', change_display: '-' },
@@ -148,7 +146,30 @@ Page({
           { platform: '百度', icon: '百', color: '#2932E1', metric: '搜索指数', value_display: '-', trend: 'flat', change_display: '-' }
         ]
       })
+      return
     }
+    this.setData({
+      socialData: [
+        {
+          platform: '微博', icon: '微', color: '#E6162D',
+          metric: '话题阅读',
+          value_display: formatNumber(socialData.weibo_topic_read_incr),
+          trend: 'flat', change_display: '-'
+        },
+        {
+          platform: '抖音', icon: '抖', color: '#000000',
+          metric: '相关播放',
+          value_display: formatNumber(socialData.douyin_topic_views_incr),
+          trend: 'flat', change_display: '-'
+        },
+        {
+          platform: '百度', icon: '百', color: '#2932E1',
+          metric: '搜索指数',
+          value_display: formatNumber(socialData.baidu_index),
+          trend: 'flat', change_display: '-'
+        }
+      ]
+    })
   },
 
   // 加载相关推荐
@@ -164,7 +185,7 @@ Page({
   // 加载追剧状态
   async loadTrackingStatus(id) {
     try {
-      const data = await api.get(`/user/tracking/${id}`, {}, true)
+      const data = await api.get(`/tracking/status/${id}`, {}, true)
       this.setData({ trackingStatus: data.status || '' })
     } catch (e) {
       // 未登录或未追
@@ -179,12 +200,12 @@ Page({
     try {
       if (current === status) {
         // 取消
-        await api.del(`/user/tracking/${this.data.dramaId}`)
+        await api.del(`/tracking/${this.data.dramaId}`)
         this.setData({ trackingStatus: '' })
         wx.showToast({ title: '已取消', icon: 'success' })
       } else {
         // 添加/更新
-        await api.post('/user/tracking', {
+        await api.post('/tracking/add', {
           drama_id: this.data.dramaId,
           status: status
         })
