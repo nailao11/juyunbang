@@ -241,9 +241,12 @@ Page({
     wx.redirectTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
   },
 
-  // 分享
+  // 分享 — 触发微信原生分享菜单
   onShareTap() {
-    // 触发分享菜单
+    wx.showShareMenu({
+      withShareTicket: true,
+      menus: ['shareAppMessage', 'shareTimeline']
+    })
   },
 
   onShareAppMessage() {

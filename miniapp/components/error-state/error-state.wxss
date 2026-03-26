@@ -1,0 +1,34 @@
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+}
+
+.error-icon {
+  font-size: 120rpx;
+  line-height: 1.2;
+  margin-bottom: 24rpx;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 40rpx;
+}
+
+.retry-button {
+  font-size: 28rpx;
+  color: #fff;
+  background-color: #667eea;
+  border: none;
+  border-radius: 44rpx;
+  padding: 0 60rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}
+
+.retry-button::after {
+  border: none;
+}

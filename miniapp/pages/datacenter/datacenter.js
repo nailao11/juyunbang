@@ -176,10 +176,30 @@ Page({
   // 打开日期选择器
   openDatePicker() {
     const today = this._getToday()
-    wx.showActionSheet({
-      itemList: ['选择日期'],
-      success: () => {
-        // 使用picker组件的方式不太合适，这里使用简单处理
+    wx.showModal({
+      title: '选择日期',
+      editable: true,
+      placeholderText: '格式：2026-03-25',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const dateStr = res.content.trim()
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr) && dateStr <= today) {
+            const parts = dateStr.split('-')
+            const displayDate = `${parts[1]}月${parts[2]}日`
+            const weekDay = ['周日','周一','周二','周三','周四','周五','周六'][new Date(dateStr).getDay()]
+            this.setData({
+              currentDate: dateStr,
+              displayDate,
+              weekday: weekDay,
+              isToday: dateStr === today,
+              page: 1,
+              rankList: []
+            })
+            this.loadRankData()
+          } else {
+            wx.showToast({ title: '日期格式不正确或超过今天', icon: 'none' })
+          }
+        }
       }
     })
   },

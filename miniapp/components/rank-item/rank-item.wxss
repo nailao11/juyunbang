@@ -1,0 +1,192 @@
+.rank-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 排名数字 */
+.rank-num {
+  width: 56rpx;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #999;
+}
+
+.rank-1 {
+  color: #f5a623;
+}
+
+.rank-2 {
+  color: #a8a8a8;
+}
+
+.rank-3 {
+  color: #cd7f32;
+}
+
+/* 中间信息 */
+.info {
+  flex: 1;
+  min-width: 0;
+  margin: 0 20rpx;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280rpx;
+}
+
+.platform-tag {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 4rpx;
+  padding: 2rpx 8rpx;
+  margin-left: 10rpx;
+}
+
+.status-tag {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  border-radius: 4rpx;
+  padding: 2rpx 8rpx;
+  margin-left: 8rpx;
+  color: #999;
+  background: rgba(153, 153, 153, 0.1);
+}
+
+.status-airing {
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
+}
+
+.status-upcoming {
+  color: #fa8c16;
+  background: rgba(250, 140, 22, 0.1);
+}
+
+/* 进度条 */
+.progress-bar {
+  height: 8rpx;
+  background: #f0f0f0;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: linear-gradient(to right, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+/* 右侧数值 */
+.value-area {
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 100rpx;
+}
+
+.value-num {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.change-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4rpx;
+}
+
+.arrow {
+  font-size: 16rpx;
+  margin-right: 2rpx;
+}
+
+.arrow-up {
+  color: #52c41a;
+}
+
+.arrow-down {
+  color: #f5222d;
+}
+
+.change-text {
+  font-size: 20rpx;
+}
+
+.change-up {
+  color: #52c41a;
+}
+
+.change-down {
+  color: #f5222d;
+}
+
+/* 深色模式 */
+.dark-mode .rank-item {
+  background: #1a1a1a;
+  border-bottom-color: #2a2a2a;
+}
+
+.dark-mode .title {
+  color: #e0e0e0;
+}
+
+.dark-mode .rank-num {
+  color: #666;
+}
+
+.dark-mode .rank-1 {
+  color: #f5a623;
+}
+
+.dark-mode .rank-2 {
+  color: #a8a8a8;
+}
+
+.dark-mode .rank-3 {
+  color: #cd7f32;
+}
+
+.dark-mode .value-num {
+  color: #e0e0e0;
+}
+
+.dark-mode .progress-bar {
+  background: #2a2a2a;
+}
+
+.dark-mode .platform-tag {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.dark-mode .status-tag {
+  background: rgba(153, 153, 153, 0.2);
+}
+
+.dark-mode .status-airing {
+  background: rgba(82, 196, 26, 0.15);
+}
+
+.dark-mode .status-upcoming {
+  background: rgba(250, 140, 22, 0.15);
+}

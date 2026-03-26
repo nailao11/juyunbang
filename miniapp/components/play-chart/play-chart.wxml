@@ -1,0 +1,59 @@
+<view class="play-chart">
+  <!-- 标题 -->
+  <view class="chart-header">
+    <text class="chart-title">{{title}}</text>
+    <text class="chart-count">共{{displayData.length}}条</text>
+  </view>
+
+  <!-- 图表主体 -->
+  <view class="chart-body" wx:if="{{displayData.length > 0}}">
+    <block wx:for="{{displayData}}" wx:key="date">
+      <view
+        class="chart-row"
+        wx:if="{{expanded || index < defaultCount}}"
+      >
+        <!-- 日期 -->
+        <text class="row-date">{{item.date}}</text>
+
+        <!-- 横向条 -->
+        <view class="row-bar-wrap">
+          <view
+            class="row-bar {{item.isTop3 ? 'row-bar--top' : ''}}"
+            style="width: {{item.barWidth}}%"
+          ></view>
+        </view>
+
+        <!-- 数值 + 涨跌 -->
+        <view class="row-value-area">
+          <text class="row-value">{{item.formattedValue}}</text>
+          <view class="row-change" wx:if="{{item.changeText}}">
+            <text
+              class="row-arrow row-arrow--{{item.changeDir}}"
+              wx:if="{{item.changeDir === 'up'}}"
+            >&#x25B2;</text>
+            <text
+              class="row-arrow row-arrow--{{item.changeDir}}"
+              wx:if="{{item.changeDir === 'down'}}"
+            >&#x25BC;</text>
+            <text class="row-change-text row-change-text--{{item.changeDir}}">{{item.changeText}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="chart-empty" wx:else>
+    <text class="chart-empty-text">暂无数据</text>
+  </view>
+
+  <!-- 展开/收起 -->
+  <view
+    class="chart-toggle"
+    wx:if="{{displayData.length > defaultCount}}"
+    bindtap="onToggleExpand"
+  >
+    <text class="chart-toggle-text">{{expanded ? '收起' : '查看更多'}}</text>
+    <text class="chart-toggle-icon">{{expanded ? '&#x25B2;' : '&#x25BC;'}}</text>
+  </view>
+</view>
