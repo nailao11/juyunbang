@@ -1,0 +1,28 @@
+<view class="rank-item" bindtap="onTap">
+  <!-- 排名 -->
+  <view class="rank-num rank-{{rank <= 3 ? rank : 'default'}}">
+    {{rank}}
+  </view>
+
+  <!-- 中间信息 -->
+  <view class="info">
+    <view class="title-row">
+      <text class="title">{{item.title}}</text>
+      <text class="platform-tag" wx:if="{{item.platform_name}}">{{item.platform_name}}</text>
+      <text class="status-tag status-{{item.status}}" wx:if="{{statusText}}">{{statusText}}</text>
+    </view>
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{progressWidth}}%"></view>
+    </view>
+  </view>
+
+  <!-- 右侧数值 -->
+  <view class="value-area">
+    <text class="value-num">{{displayValue}}</text>
+    <view class="change-row" wx:if="{{changeText}}">
+      <text class="arrow arrow-{{changeDir}}" wx:if="{{changeDir === 'up'}}">&#x25B2;</text>
+      <text class="arrow arrow-{{changeDir}}" wx:if="{{changeDir === 'down'}}">&#x25BC;</text>
+      <text class="change-text change-{{changeDir}}">{{changeText}}</text>
+    </view>
+  </view>
+</view>

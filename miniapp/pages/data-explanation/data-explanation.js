@@ -78,5 +78,12 @@ Page({
     const idx = e.currentTarget.dataset.index
     const key = `faqs[${idx}].open`
     this.setData({ [key]: !this.data.faqs[idx].open })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 数据说明',
+      path: '/pages/data-explanation/data-explanation'
+    }
   }
 })

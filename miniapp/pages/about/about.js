@@ -20,5 +20,12 @@ Page({
         wx.showToast({ title: '邮箱已复制', icon: 'success' })
       }
     })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 关于我们',
+      path: '/pages/about/about'
+    }
   }
 })

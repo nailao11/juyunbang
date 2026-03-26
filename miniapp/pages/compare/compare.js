@@ -124,5 +124,12 @@ Page({
     if (this.data.dramaA && this.data.dramaB) {
       this.loadCompareData()
     }
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 剧集对比',
+      path: '/pages/compare/compare'
+    }
   }
 })

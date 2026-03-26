@@ -9,12 +9,12 @@ echo "  剧云榜 一键部署脚本"
 echo "============================="
 
 PROJECT_DIR="/opt/juyunbang"
-BACKEND_DIR="$PROJECT_DIR/backend"
+BACKEND_DIR="$PROJECT_DIR/code/backend"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 1. 创建目录
 echo "[1/9] 创建项目目录..."
-mkdir -p $PROJECT_DIR/{backend,logs,static}
+mkdir -p $PROJECT_DIR/{code,logs,static}
 mkdir -p /var/www/juyunbang
 
 # 2. 复制代码

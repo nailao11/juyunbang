@@ -1,0 +1,5 @@
+<view class="error-state">
+  <text class="error-icon">&#x26A0;</text>
+  <text class="error-text">{{text}}</text>
+  <button wx:if="{{showRetry}}" class="retry-button" bindtap="onRetryTap">重新加载</button>
+</view>

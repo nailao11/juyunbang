@@ -5,11 +5,12 @@ After=network.target mariadb.service redis.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/juyunbang/backend
-ExecStart=/opt/juyunbang/backend/venv/bin/python scheduler/task_scheduler.py
+WorkingDirectory=/opt/juyunbang/code/backend
+Environment="PATH=/opt/juyunbang/code/backend/venv/bin:/usr/bin"
+Environment=PYTHONPATH=/opt/juyunbang/code/backend
+ExecStart=/opt/juyunbang/code/backend/venv/bin/python scheduler/task_scheduler.py
 Restart=always
 RestartSec=10
-Environment=PYTHONPATH=/opt/juyunbang/backend
 
 [Install]
 WantedBy=multi-user.target

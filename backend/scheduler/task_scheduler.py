@@ -15,7 +15,7 @@ from loguru import logger
 
 # 配置日志
 logger.add(
-    "logs/scheduler_{time:YYYY-MM-DD}.log",
+    "/opt/juyunbang/logs/scheduler_{time:YYYY-MM-DD}.log",
     rotation="00:00",
     retention="30 days",
     level="INFO",
@@ -52,13 +52,14 @@ def job_crawl_heat():
 
 
 def job_crawl_social():
-    """每60分钟：采集社交媒体数据"""
+    """每60分钟：采集社交媒体数据（微博/抖音/百度）"""
     logger.info("=== 开始社交媒体数据采集任务 ===")
     try:
         from crawlers.weibo_crawler import WeiboCrawler
         from crawlers.douyin_crawler import DouyinCrawler
+        from crawlers.baidu_crawler import BaiduCrawler
 
-        for CrawlerClass in [WeiboCrawler, DouyinCrawler]:
+        for CrawlerClass in [WeiboCrawler, DouyinCrawler, BaiduCrawler]:
             try:
                 crawler = CrawlerClass()
                 crawler.crawl()
@@ -67,6 +68,17 @@ def job_crawl_social():
 
     except Exception as e:
         logger.error(f"社交采集任务异常: {e}")
+
+
+def job_clean_data():
+    """每日00:00：数据清洗（去除异常值和重复记录）"""
+    logger.info("=== 开始数据清洗 ===")
+    try:
+        from processors.data_cleaner import DataCleaner
+        cleaner = DataCleaner()
+        cleaner.run()
+    except Exception as e:
+        logger.error(f"数据清洗异常: {e}")
 
 
 def job_daily_calculate():
@@ -89,14 +101,33 @@ def job_index_calculate():
         logger.error(f"剧力指数计算异常: {e}")
 
 
+def job_detect_anomalies():
+    """每日01:30：检测热度异动"""
+    logger.info("=== 开始热度异动检测 ===")
+    try:
+        from processors.anomaly_detector import AnomalyDetector
+        detector = AnomalyDetector()
+        detector.run()
+    except Exception as e:
+        logger.error(f"异动检测异常: {e}")
+
+
 def job_daily_publish():
-    """每日15:00：发布日度数据"""
+    """每日15:00：发布日度数据并生成日报"""
     logger.info("=== 开始发布日度数据 ===")
     try:
         from processors.daily_calculator import publish_daily_data
         publish_daily_data()
     except Exception as e:
         logger.error(f"日度数据发布异常: {e}")
+
+    logger.info("=== 开始生成每日简报 ===")
+    try:
+        from processors.report_generator import ReportGenerator
+        generator = ReportGenerator()
+        generator.run()
+    except Exception as e:
+        logger.error(f"日报生成异常: {e}")
 
 
 def job_crawl_douban():
@@ -150,6 +181,14 @@ def main():
         max_instances=1
     )
 
+    # 每日00:00：数据清洗
+    scheduler.add_job(
+        job_clean_data,
+        CronTrigger(hour=0, minute=0),
+        id='clean_data',
+        name='数据清洗'
+    )
+
     # 每日00:30：日度统计计算
     scheduler.add_job(
         job_daily_calculate,
@@ -166,12 +205,20 @@ def main():
         name='剧力指数计算'
     )
 
-    # 每日15:00：发布日度数据
+    # 每日01:30：热度异动检测
+    scheduler.add_job(
+        job_detect_anomalies,
+        CronTrigger(hour=1, minute=30),
+        id='detect_anomalies',
+        name='热度异动检测'
+    )
+
+    # 每日15:00：发布日度数据 + 生成日报
     scheduler.add_job(
         job_daily_publish,
         CronTrigger(hour=15, minute=0),
         id='daily_publish',
-        name='日度数据发布'
+        name='日度数据发布与日报生成'
     )
 
     # 每日03:00：豆瓣评分更新

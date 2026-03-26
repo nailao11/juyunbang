@@ -1,0 +1,182 @@
+/* 播放量趋势图组件 */
+
+.play-chart {
+  background-color: var(--card, #fff);
+  border-radius: 16rpx;
+  box-shadow: var(--shadow, 0 2rpx 12rpx rgba(0, 0, 0, 0.06));
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+/* 标题区 */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.chart-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text, #333);
+}
+
+.chart-count {
+  font-size: 22rpx;
+  color: var(--text-light, #999);
+}
+
+/* 图表主体 */
+.chart-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 每一行 */
+.chart-row {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0;
+}
+
+/* 日期标签 */
+.row-date {
+  width: 100rpx;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--text-secondary, #666);
+}
+
+/* 横向条容器 */
+.row-bar-wrap {
+  flex: 1;
+  height: 24rpx;
+  background: var(--bar-bg, #f0f0f0);
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin: 0 16rpx;
+}
+
+/* 横向条 */
+.row-bar {
+  height: 100%;
+  border-radius: 12rpx;
+  background: linear-gradient(to right, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+/* Top 3 高亮渐变 */
+.row-bar--top {
+  background: linear-gradient(to right, #f6d365, #fda085);
+}
+
+/* 数值区 */
+.row-value-area {
+  flex-shrink: 0;
+  min-width: 140rpx;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.row-value {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text, #333);
+}
+
+/* 涨跌指示 */
+.row-change {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 2rpx;
+}
+
+.row-arrow {
+  font-size: 14rpx;
+  margin-right: 2rpx;
+}
+
+.row-arrow--up {
+  color: #52c41a;
+}
+
+.row-arrow--down {
+  color: #f5222d;
+}
+
+.row-change-text {
+  font-size: 18rpx;
+}
+
+.row-change-text--up {
+  color: #52c41a;
+}
+
+.row-change-text--down {
+  color: #f5222d;
+}
+
+/* 空状态 */
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+}
+
+.chart-empty-text {
+  font-size: 26rpx;
+  color: var(--text-light, #999);
+}
+
+/* 展开/收起 */
+.chart-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0 4rpx;
+  gap: 8rpx;
+}
+
+.chart-toggle-text {
+  font-size: 24rpx;
+  color: var(--primary, #667eea);
+}
+
+.chart-toggle-icon {
+  font-size: 18rpx;
+  color: var(--primary, #667eea);
+}
+
+/* 深色模式 */
+.dark-mode .play-chart {
+  background-color: var(--card, #1a1a1a);
+}
+
+.dark-mode .chart-title {
+  color: var(--text, #e0e0e0);
+}
+
+.dark-mode .chart-count {
+  color: var(--text-light, #666);
+}
+
+.dark-mode .row-date {
+  color: var(--text-secondary, #888);
+}
+
+.dark-mode .row-bar-wrap {
+  background: var(--bar-bg, #2a2a2a);
+}
+
+.dark-mode .row-value {
+  color: var(--text, #e0e0e0);
+}
+
+.dark-mode .chart-empty-text {
+  color: var(--text-light, #555);
+}

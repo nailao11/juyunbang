@@ -75,5 +75,12 @@ Page({
   goDetail(e) {
     const id = e.currentTarget.dataset.id
     wx.navigateTo({ url: `/pages/news-detail/news-detail?id=${id}` })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 影视资讯',
+      path: '/pages/news-list/news-list'
+    }
   }
 })

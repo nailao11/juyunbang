@@ -1,0 +1,36 @@
+<view class="heat-chart" wx:if="{{hasData}}">
+  <!-- Title -->
+  <view class="chart-title">{{title}}</view>
+
+  <view class="chart-body" style="height: {{height}}rpx;">
+    <!-- Y-axis labels -->
+    <view class="y-axis">
+      <text class="y-label y-max">{{maxLabel}}</text>
+      <text class="y-label y-min">{{minLabel}}</text>
+    </view>
+
+    <!-- Bar area -->
+    <view class="bar-area">
+      <view class="bars-row">
+        <view
+          class="bar-col {{item.isLatest ? 'bar-latest' : ''}}"
+          wx:for="{{bars}}"
+          wx:key="index"
+        >
+          <view class="bar" style="height: {{item.barHeight}}rpx;"></view>
+        </view>
+      </view>
+
+      <!-- X-axis time labels -->
+      <view class="x-axis">
+        <view
+          class="x-label-slot"
+          wx:for="{{bars}}"
+          wx:key="index"
+        >
+          <text class="x-label" wx:if="{{item.showLabel}}">{{item.time}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

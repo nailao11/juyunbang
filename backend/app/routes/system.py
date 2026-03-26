@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -155,4 +157,4 @@ def upload_image():
 def upload_token():
     """获取七牛云上传凭证"""
     token = get_upload_token()
-    return success({'token': token, 'domain': 'https://' + __import__('os').getenv('QINIU_DOMAIN', '')})
+    return success({'token': token, 'domain': 'https://' + os.getenv('QINIU_DOMAIN', '')})

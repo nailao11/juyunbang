@@ -244,5 +244,12 @@ Page({
   goDetail(e) {
     const id = e.currentTarget.dataset.id
     wx.navigateTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 追剧笔记',
+      path: '/pages/notes/notes'
+    }
   }
 })

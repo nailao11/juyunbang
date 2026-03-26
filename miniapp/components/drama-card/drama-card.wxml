@@ -1,0 +1,46 @@
+<view class="drama-card" bindtap="onTap">
+  <!-- 左侧：封面海报 -->
+  <view class="poster-wrap">
+    <image
+      class="poster"
+      src="{{drama.cover_img}}"
+      mode="aspectFill"
+      lazy-load
+    />
+    <view
+      wx:if="{{rank > 0}}"
+      class="rank-badge rank-badge--{{rank <= 3 ? rank : 'other'}}"
+    >
+      {{rank}}
+    </view>
+  </view>
+
+  <!-- 右侧：信息区 -->
+  <view class="info">
+    <text class="title">{{drama.title}}</text>
+
+    <!-- 标签行：类型 + 地区 -->
+    <view class="tags">
+      <text wx:if="{{drama.genre}}" class="tag">{{drama.genre}}</text>
+      <text wx:if="{{drama.region}}" class="tag">{{drama.region}}</text>
+      <text wx:if="{{drama.status}}" class="tag tag--status">{{drama.status}}</text>
+    </view>
+
+    <!-- 平台 -->
+    <view wx:if="{{drama.platform_name}}" class="platform">
+      <text class="platform-badge">{{drama.platform_name}}</text>
+    </view>
+
+    <!-- 底部指标 -->
+    <view class="metrics">
+      <view wx:if="{{showHeat && drama.heat_value}}" class="metric">
+        <text class="metric-label">热度</text>
+        <text class="metric-value heat">{{drama.heat_value}}</text>
+      </view>
+      <view wx:if="{{showScore && drama.douban_score}}" class="metric">
+        <text class="metric-label">豆瓣</text>
+        <text class="metric-value score">{{drama.douban_score}}</text>
+      </view>
+    </view>
+  </view>
+</view>

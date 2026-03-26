@@ -37,15 +37,21 @@ App({
             method: 'POST',
             data: { code: res.code },
             success: (resp) => {
-              if (resp.data.code === 200) {
+              if (resp.data && resp.data.code === 200 && resp.data.data) {
                 const { token, user_id } = resp.data.data
                 this.globalData.token = token
                 wx.setStorageSync('token', token)
                 wx.setStorageSync('userId', user_id)
               }
+            },
+            fail: (err) => {
+              console.warn('自动登录请求失败:', err)
             }
           })
         }
+      },
+      fail: (err) => {
+        console.warn('wx.login失败:', err)
       }
     })
   }

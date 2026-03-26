@@ -202,5 +202,12 @@ Page({
   // 返回
   goBack() {
     wx.navigateBack({ delta: 1 })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 搜索',
+      path: '/pages/search/search'
+    }
   }
 })

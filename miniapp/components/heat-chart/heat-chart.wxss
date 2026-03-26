@@ -1,0 +1,141 @@
+.heat-chart {
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+/* Title */
+.chart-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+/* Chart body: y-axis + bar area side by side */
+.chart-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+/* Y-axis */
+.y-axis {
+  width: 72rpx;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 40rpx; /* leave room for x-axis labels */
+}
+
+.y-label {
+  font-size: 20rpx;
+  color: #999;
+}
+
+.y-max {
+  text-align: right;
+  padding-right: 8rpx;
+}
+
+.y-min {
+  text-align: right;
+  padding-right: 8rpx;
+}
+
+/* Bar area */
+.bar-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Bars row: flex row, bars aligned at bottom */
+.bars-row {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 4rpx;
+}
+
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* Individual bar */
+.bar {
+  width: 100%;
+  min-width: 4rpx;
+  max-width: 28rpx;
+  border-radius: 4rpx 4rpx 0 0;
+  background: linear-gradient(to top, #667eea, #764ba2);
+  transition: height 0.3s ease;
+}
+
+/* Highlighted latest bar */
+.bar-latest .bar {
+  background: linear-gradient(to top, #667eea, #f093fb);
+  box-shadow: 0 0 8rpx rgba(102, 126, 234, 0.5);
+}
+
+/* X-axis */
+.x-axis {
+  display: flex;
+  flex-direction: row;
+  height: 40rpx;
+  flex-shrink: 0;
+}
+
+.x-label-slot {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  overflow: visible;
+}
+
+.x-label {
+  font-size: 18rpx;
+  color: #999;
+  white-space: nowrap;
+  transform: rotate(-30deg);
+  transform-origin: top center;
+  margin-top: 6rpx;
+}
+
+/* ==================== Dark mode ==================== */
+
+.dark-mode .heat-chart {
+  background: #1a1a1a;
+}
+
+.dark-mode .chart-title {
+  color: #e0e0e0;
+}
+
+.dark-mode .y-label {
+  color: #666;
+}
+
+.dark-mode .x-label {
+  color: #666;
+}
+
+.dark-mode .bar {
+  background: linear-gradient(to top, #667eea, #764ba2);
+}
+
+.dark-mode .bar-latest .bar {
+  background: linear-gradient(to top, #667eea, #f093fb);
+  box-shadow: 0 0 8rpx rgba(102, 126, 234, 0.4);
+}

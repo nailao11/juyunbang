@@ -1,0 +1,161 @@
+/* 剧卡组件 */
+
+.drama-card {
+  display: flex;
+  background-color: var(--card);
+  border-radius: 16rpx;
+  box-shadow: var(--shadow);
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+}
+
+/* 左侧海报 */
+.poster-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 160rpx;
+  height: 220rpx;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.poster {
+  width: 100%;
+  height: 100%;
+}
+
+/* 排名角标 */
+.rank-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44rpx;
+  height: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 0 0 12rpx 0;
+}
+
+.rank-badge--1 {
+  background-color: #f6c443;
+}
+
+.rank-badge--2 {
+  background-color: #c0c0c0;
+}
+
+.rank-badge--3 {
+  background-color: #cd7f32;
+}
+
+.rank-badge--other {
+  background-color: var(--text-secondary);
+}
+
+/* 右侧信息区 */
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 20rpx;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* 标签 */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+  gap: 8rpx;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+  color: var(--primary);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.tag--status {
+  color: var(--success);
+  background: rgba(45, 206, 137, 0.1);
+}
+
+/* 平台标识 */
+.platform {
+  margin-top: 12rpx;
+}
+
+.platform-badge {
+  display: inline-block;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  font-size: 22rpx;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+/* 底部指标 */
+.metrics {
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 12rpx;
+  gap: 28rpx;
+}
+
+.metric {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.metric-label {
+  font-size: 22rpx;
+  color: var(--text-light);
+}
+
+.metric-value {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.metric-value.heat {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.metric-value.score {
+  color: #faad14;
+}
+
+/* 深色模式（继承自 CSS 变量，额外微调） */
+.dark-mode .tag {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.dark-mode .tag--status {
+  background: rgba(45, 206, 137, 0.15);
+}
+
+.dark-mode .platform-badge {
+  opacity: 0.9;
+}
