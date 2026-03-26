@@ -104,5 +104,12 @@ Page({
   goDetail(e) {
     const id = e.currentTarget.dataset.id
     wx.navigateTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 排行详情',
+      path: '/pages/rank-detail/rank-detail'
+    }
   }
 })

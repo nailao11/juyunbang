@@ -179,5 +179,12 @@ Page({
 
   goDiscover() {
     wx.switchTab({ url: '/pages/discover/discover' })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 我的追剧',
+      path: '/pages/tracking-list/tracking-list'
+    }
   }
 })

@@ -138,5 +138,12 @@ Page({
     const now = new Date()
     return now.getHours().toString().padStart(2, '0') + ':' +
            now.getMinutes().toString().padStart(2, '0')
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 实时热度排行',
+      path: '/pages/index/index'
+    }
   }
 })

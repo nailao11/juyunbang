@@ -59,7 +59,7 @@ class ReportGenerator:
         top_play_value = int(top_play['total_play']) if top_play else 0
 
         riser_title = biggest_riser['title'] if biggest_riser else '无'
-        riser_change = int(biggest_riser['rank_change']) if biggest_riser else 0
+        riser_change = int(biggest_riser['rank_change']) if biggest_riser and biggest_riser['rank_change'] is not None else 0
 
         summary = (
             f"热度冠军: {top_heat_title}({top_heat_value}); "

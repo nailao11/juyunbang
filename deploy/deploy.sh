@@ -14,7 +14,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 1. 创建目录
 echo "[1/9] 创建项目目录..."
-mkdir -p $PROJECT_DIR/{backend,logs,static}
+mkdir -p $PROJECT_DIR/{code,logs,static}
 mkdir -p /var/www/juyunbang
 
 # 2. 复制代码

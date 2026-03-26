@@ -15,7 +15,7 @@ from loguru import logger
 
 # 配置日志
 logger.add(
-    "logs/scheduler_{time:YYYY-MM-DD}.log",
+    "/opt/juyunbang/logs/scheduler_{time:YYYY-MM-DD}.log",
     rotation="00:00",
     retention="30 days",
     level="INFO",

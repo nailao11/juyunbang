@@ -146,5 +146,12 @@ Page({
 
   navigateTo(e) {
     wx.navigateTo({ url: e.currentTarget.dataset.url })
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 设置',
+      path: '/pages/settings/settings'
+    }
   }
 })

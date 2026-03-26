@@ -10,8 +10,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # 跨域支持
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # 跨域支持（微信小程序请求不受CORS限制，此处为开发调试用）
+    CORS(app, resources={r"/api/*": {"origins": ["https://servicewechat.com", "https://sqnl8.cn"]}})
 
     # JWT认证
     JWTManager(app)

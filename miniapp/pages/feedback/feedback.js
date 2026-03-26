@@ -105,5 +105,12 @@ Page({
       wx.hideLoading()
       wx.showToast({ title: '提交失败，请重试', icon: 'none' })
     }
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 意见反馈',
+      path: '/pages/feedback/feedback'
+    }
   }
 })

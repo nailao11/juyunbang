@@ -212,5 +212,12 @@ Page({
 
   _getToday() {
     return formatFullDate(new Date())
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '剧云榜 — 数据中心',
+      path: '/pages/datacenter/datacenter'
+    }
   }
 })

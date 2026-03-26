@@ -288,15 +288,22 @@ CREATE TABLE IF NOT EXISTS news (
 
 -- 表15：每日数据简报表
 CREATE TABLE IF NOT EXISTS daily_report (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  report_date  DATE NOT NULL COMMENT '报告日期',
-  report_type  ENUM('daily','weekly','monthly') COMMENT '报告类型',
-  title        VARCHAR(200) COMMENT '报告标题',
-  content      TEXT COMMENT '报告内容(JSON)',
-  highlights   TEXT COMMENT '亮点摘要(JSON)',
-  published_at DATETIME COMMENT '发布时间',
+  id                      INT AUTO_INCREMENT PRIMARY KEY,
+  stat_date               DATE NOT NULL COMMENT '统计日期',
+  top_heat_drama_id       INT COMMENT '热度冠军剧集ID',
+  top_heat_title          VARCHAR(200) COMMENT '热度冠军剧名',
+  top_heat_value          DECIMAL(12,2) COMMENT '热度冠军热度值',
+  top_play_drama_id       INT COMMENT '播放冠军剧集ID',
+  top_play_title          VARCHAR(200) COMMENT '播放冠军剧名',
+  top_play_value          BIGINT COMMENT '播放冠军播放量',
+  biggest_riser_drama_id  INT COMMENT '最大黑马剧集ID',
+  biggest_riser_title     VARCHAR(200) COMMENT '最大黑马剧名',
+  biggest_riser_change    INT COMMENT '最大黑马排名上升位数',
+  total_dramas            INT COMMENT '当日追踪剧集总数',
+  summary                 TEXT COMMENT '日报摘要文字',
+  generated_at            DATETIME COMMENT '生成时间',
 
-  UNIQUE KEY uk_date_type (report_date, report_type)
+  UNIQUE KEY uk_stat_date (stat_date)
 ) ENGINE=InnoDB COMMENT='数据简报表';
 
 -- 表16：采集任务记录表
