@@ -51,25 +51,6 @@ def job_crawl_heat():
         logger.error(f"热度采集任务异常: {e}")
 
 
-def job_crawl_social():
-    """每60分钟：采集社交媒体数据（微博/抖音/百度）"""
-    logger.info("=== 开始社交媒体数据采集任务 ===")
-    try:
-        from crawlers.weibo_crawler import WeiboCrawler
-        from crawlers.douyin_crawler import DouyinCrawler
-        from crawlers.baidu_crawler import BaiduCrawler
-
-        for CrawlerClass in [WeiboCrawler, DouyinCrawler, BaiduCrawler]:
-            try:
-                crawler = CrawlerClass()
-                crawler.crawl()
-            except Exception as e:
-                logger.error(f"社交数据采集失败: {e}")
-
-    except Exception as e:
-        logger.error(f"社交采集任务异常: {e}")
-
-
 def job_clean_data():
     """每日00:00：数据清洗（去除异常值和重复记录）"""
     logger.info("=== 开始数据清洗 ===")
@@ -169,15 +150,6 @@ def main():
         IntervalTrigger(minutes=15),
         id='crawl_heat',
         name='热度数据采集',
-        max_instances=1
-    )
-
-    # 每60分钟：社交媒体采集
-    scheduler.add_job(
-        job_crawl_social,
-        IntervalTrigger(minutes=60),
-        id='crawl_social',
-        name='社交媒体数据采集',
         max_instances=1
     )
 
