@@ -70,8 +70,8 @@ def daily_brief():
 
     report = query_one(
         "SELECT * FROM daily_report "
-        "WHERE report_type = 'daily' AND published_at IS NOT NULL "
-        "ORDER BY report_date DESC LIMIT 1"
+        "WHERE generated_at IS NOT NULL "
+        "ORDER BY stat_date DESC LIMIT 1"
     )
 
     if report:
