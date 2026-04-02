@@ -43,7 +43,14 @@ Page({
   async loadPlatforms() {
     try {
       const data = await api.get('/system/platforms')
-      this.setData({ platforms: data || [] })
+      // 按 short_name 去重，防止后端返回重复平台
+      const seen = new Set()
+      const unique = (data || []).filter(p => {
+        if (seen.has(p.short_name)) return false
+        seen.add(p.short_name)
+        return true
+      })
+      this.setData({ platforms: unique })
     } catch (e) {
       console.error('加载平台列表失败', e)
     }

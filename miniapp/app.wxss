@@ -34,6 +34,12 @@ page {
   --text-light: #718096;
   --border: #2d3748;
   --shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
+  background-color: #171923 !important;
+}
+
+.dark-mode .card {
+  border: none;
+  box-shadow: none;
 }
 
 /* 通用容器 */

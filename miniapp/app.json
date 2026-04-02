@@ -2,17 +2,11 @@
   "pages": [
     "pages/index/index",
     "pages/datacenter/datacenter",
-    "pages/discover/discover",
     "pages/mine/mine",
     "pages/drama-detail/drama-detail",
     "pages/rank-detail/rank-detail",
     "pages/compare/compare",
     "pages/search/search",
-    "pages/tracking-list/tracking-list",
-    "pages/tracking-report/tracking-report",
-    "pages/notes/notes",
-    "pages/news-list/news-list",
-    "pages/news-detail/news-detail",
     "pages/settings/settings",
     "pages/about/about",
     "pages/data-explanation/data-explanation",
@@ -42,12 +36,6 @@
         "text": "数据",
         "iconPath": "images/tabbar/data.png",
         "selectedIconPath": "images/tabbar/data-active.png"
-      },
-      {
-        "pagePath": "pages/discover/discover",
-        "text": "发现",
-        "iconPath": "images/tabbar/discover.png",
-        "selectedIconPath": "images/tabbar/discover-active.png"
       },
       {
         "pagePath": "pages/mine/mine",

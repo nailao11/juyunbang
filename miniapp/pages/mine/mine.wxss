@@ -176,6 +176,17 @@
   height: 36rpx;
 }
 
+.menu-icon-text {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.menu-arrow-text {
+  font-size: 36rpx;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
 .menu-text {
   flex: 1;
   margin-left: 20rpx;

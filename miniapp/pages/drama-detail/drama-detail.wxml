@@ -9,7 +9,7 @@
       </view>
       <text class="nav-title" wx:if="{{scrolled}}">{{drama.title}}</text>
       <view class="nav-share" bindtap="onShareTap">
-        <image src="/images/icons/share-white.png" class="share-icon" mode="aspectFit"></image>
+        <text class="share-icon-text">↗</text>
       </view>
     </view>
   </view>
@@ -61,19 +61,14 @@
   <view class="action-bar card" style="margin: -20rpx 24rpx 20rpx;">
     <view class="action-btn {{trackingStatus === 'watching' ? 'active' : ''}}"
           bindtap="toggleTracking" data-status="watching">
-      <image class="action-icon" src="/images/icons/tracking.png" mode="aspectFit"></image>
+      <text class="action-icon-emoji">📺</text>
       <text class="action-text">{{trackingStatus === 'watching' ? '在追' : '追剧'}}</text>
     </view>
     <view class="action-divider"></view>
     <view class="action-btn {{trackingStatus === 'want_to_watch' ? 'active' : ''}}"
           bindtap="toggleTracking" data-status="want_to_watch">
-      <image class="action-icon" src="/images/icons/want.png" mode="aspectFit"></image>
+      <text class="action-icon-emoji">❤</text>
       <text class="action-text">{{trackingStatus === 'want_to_watch' ? '已想看' : '想看'}}</text>
-    </view>
-    <view class="action-divider"></view>
-    <view class="action-btn" bindtap="goNotes">
-      <image class="action-icon" src="/images/icons/note.png" mode="aspectFit"></image>
-      <text class="action-text">笔记</text>
     </view>
   </view>
 

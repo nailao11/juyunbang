@@ -57,32 +57,15 @@
 
   <!-- 功能菜单 -->
   <view class="menu-section container">
-    <!-- 追剧工具 -->
+    <!-- 工具 -->
     <view class="card menu-card">
-      <view class="menu-group-title">追剧工具</view>
-      <view class="menu-item" bindtap="navigateTo" data-url="/pages/tracking-list/tracking-list">
-        <view class="menu-icon-wrap" style="background: rgba(102,126,234,0.1);">
-          <image class="menu-icon" src="/images/icons/list.png" mode="aspectFit"></image>
-        </view>
-        <text class="menu-text">追剧清单</text>
-        <text class="menu-badge" wx:if="{{stats.watching > 0}}">{{stats.watching}}</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
-      </view>
-      <view class="menu-divider"></view>
-      <view class="menu-item" bindtap="navigateTo" data-url="/pages/notes/notes">
+      <view class="menu-group-title">实用工具</view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/compare/compare">
         <view class="menu-icon-wrap" style="background: rgba(240,147,251,0.1);">
-          <image class="menu-icon" src="/images/icons/note.png" mode="aspectFit"></image>
+          <text class="menu-icon-text">⚖</text>
         </view>
-        <text class="menu-text">追剧笔记</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
-      </view>
-      <view class="menu-divider"></view>
-      <view class="menu-item" bindtap="navigateTo" data-url="/pages/tracking-report/tracking-report">
-        <view class="menu-icon-wrap" style="background: rgba(45,206,137,0.1);">
-          <image class="menu-icon" src="/images/icons/report.png" mode="aspectFit"></image>
-        </view>
-        <text class="menu-text">追剧报告</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+        <text class="menu-text">对比工具</text>
+        <text class="menu-arrow-text">›</text>
       </view>
     </view>
 
@@ -91,42 +74,26 @@
       <view class="menu-group-title">设置与帮助</view>
       <view class="menu-item">
         <view class="menu-icon-wrap" style="background: rgba(50,50,93,0.1);">
-          <image class="menu-icon" src="/images/icons/moon.png" mode="aspectFit"></image>
+          <text class="menu-icon-text">🌙</text>
         </view>
         <text class="menu-text">深色模式</text>
         <switch class="dark-switch" checked="{{darkMode}}" bindchange="toggleDarkMode" color="#667eea"/>
       </view>
       <view class="menu-divider"></view>
-      <view class="menu-item" bindtap="navigateTo" data-url="/pages/settings/settings">
-        <view class="menu-icon-wrap" style="background: rgba(142,148,170,0.1);">
-          <image class="menu-icon" src="/images/icons/settings.png" mode="aspectFit"></image>
-        </view>
-        <text class="menu-text">设置</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
-      </view>
-      <view class="menu-divider"></view>
       <view class="menu-item" bindtap="navigateTo" data-url="/pages/data-explanation/data-explanation">
         <view class="menu-icon-wrap" style="background: rgba(102,126,234,0.1);">
-          <image class="menu-icon" src="/images/icons/info.png" mode="aspectFit"></image>
+          <text class="menu-icon-text">📊</text>
         </view>
         <text class="menu-text">数据说明</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+        <text class="menu-arrow-text">›</text>
       </view>
       <view class="menu-divider"></view>
       <view class="menu-item" bindtap="navigateTo" data-url="/pages/feedback/feedback">
         <view class="menu-icon-wrap" style="background: rgba(251,99,64,0.1);">
-          <image class="menu-icon" src="/images/icons/feedback.png" mode="aspectFit"></image>
+          <text class="menu-icon-text">💬</text>
         </view>
         <text class="menu-text">意见反馈</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
-      </view>
-      <view class="menu-divider"></view>
-      <view class="menu-item" bindtap="navigateTo" data-url="/pages/about/about">
-        <view class="menu-icon-wrap" style="background: rgba(118,75,162,0.1);">
-          <image class="menu-icon" src="/images/icons/about.png" mode="aspectFit"></image>
-        </view>
-        <text class="menu-text">关于我们</text>
-        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+        <text class="menu-arrow-text">›</text>
       </view>
     </view>
 

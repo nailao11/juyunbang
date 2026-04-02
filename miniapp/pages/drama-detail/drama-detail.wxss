@@ -62,6 +62,16 @@
   height: 36rpx;
 }
 
+.share-icon-text {
+  font-size: 36rpx;
+  color: #fff;
+}
+
+.action-icon-emoji {
+  font-size: 36rpx;
+  margin-bottom: 4rpx;
+}
+
 /* 头部海报区 */
 .detail-header {
   position: relative;

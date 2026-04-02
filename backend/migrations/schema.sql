@@ -55,10 +55,11 @@ CREATE TABLE IF NOT EXISTS platforms (
   website     VARCHAR(200) COMMENT '官网地址',
   color       VARCHAR(10) COMMENT '品牌色值',
   sort_order  INT DEFAULT 0 COMMENT '排序',
-  is_active   TINYINT(1) DEFAULT 1 COMMENT '是否启用'
+  is_active   TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+  UNIQUE KEY uk_short_name (short_name)
 ) ENGINE=InnoDB COMMENT='平台表';
 
-INSERT INTO platforms (name, short_name, color, sort_order) VALUES
+INSERT IGNORE INTO platforms (name, short_name, color, sort_order) VALUES
 ('爱奇艺', 'iqiyi', '#00BE06', 1),
 ('优酷', 'youku', '#1EBCF2', 2),
 ('腾讯视频', 'tencent', '#FF6600', 3),
