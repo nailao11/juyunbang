@@ -23,8 +23,12 @@ class BilibiliCrawler(BaseCrawler):
             results.extend(data)
 
             # 匹配剧名并保存
+            # 类型映射
+            type_map = {'tv': 'tv_drama', 'variety': 'variety', 'anime': 'anime'}
+
             for item in results:
-                drama_id = self._match_drama(item['title'])
+                dtype = type_map.get(item.get('category'), 'tv_drama')
+                drama_id = self._match_drama(item['title'], drama_type=dtype)
                 if drama_id:
                     try:
                         # 保存热度数据（播放量作为热度值）

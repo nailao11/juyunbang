@@ -27,25 +27,33 @@ def job_crawl_heat():
     """每15分钟：采集各平台热度数据"""
     logger.info("=== 开始热度数据采集任务 ===")
     try:
-        from crawlers.iqiyi_crawler import IqiyiCrawler
+        from crawlers.base_crawler import BaseCrawler
         from crawlers.bilibili_crawler import BilibiliCrawler
+        from crawlers.iqiyi_crawler import IqiyiCrawler
         from crawlers.youku_crawler import YoukuCrawler
         from crawlers.tencent_crawler import TencentCrawler
         from crawlers.mgtv_crawler import MgtvCrawler
 
+        # 每轮采集前清除缓存，确保新剧能被匹配到
+        BaseCrawler.clear_drama_cache()
+
         crawlers = [
+            BilibiliCrawler(),   # 最稳定，优先执行
             IqiyiCrawler(),
-            BilibiliCrawler(),
-            YoukuCrawler(),
             TencentCrawler(),
+            YoukuCrawler(),
             MgtvCrawler(),
         ]
 
+        total_saved = 0
         for crawler in crawlers:
             try:
-                crawler.crawl()
+                results = crawler.crawl()
+                total_saved += len(results) if results else 0
             except Exception as e:
                 logger.error(f"{crawler.platform_name} 采集失败: {e}")
+
+        logger.info(f"=== 热度采集完成，本轮共采集 {total_saved} 条数据 ===")
 
     except Exception as e:
         logger.error(f"热度采集任务异常: {e}")
@@ -213,6 +221,10 @@ def main():
     logger.info(f"已注册 {len(scheduler.get_jobs())} 个定时任务：")
     for job in scheduler.get_jobs():
         logger.info(f"  - {job.name} ({job.trigger})")
+
+    # 启动时立即执行一次热度采集，确保有数据
+    logger.info("=== 首次启动，立即执行热度采集 ===")
+    job_crawl_heat()
 
     try:
         scheduler.start()

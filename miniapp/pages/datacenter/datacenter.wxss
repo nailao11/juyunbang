@@ -1,12 +1,19 @@
 /* 数据中心样式 */
 
+/* 顶部衔接色块 - 消除导航栏与内容缝隙 */
+.dc-top-bridge {
+  height: 2rpx;
+  background: #667eea;
+}
+
 /* 日期选择器 */
 .date-picker {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 20rpx 24rpx;
+  margin: 0 24rpx 20rpx;
   padding: 20rpx 24rpx;
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .date-nav {

@@ -35,8 +35,11 @@ class TencentCrawler(BaseCrawler):
             variety_data = self._crawl_rank('variety')
             results.extend(variety_data)
 
+            type_map = {'tv': 'tv_drama', 'variety': 'variety', 'anime': 'anime'}
+
             for item in results:
-                drama_id = self._match_drama(item['title'])
+                dtype = type_map.get(item.get('category'), 'tv_drama')
+                drama_id = self._match_drama(item['title'], drama_type=dtype)
                 if drama_id:
                     try:
                         self.save_heat_data(

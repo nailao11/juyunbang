@@ -23,7 +23,7 @@ class MgtvCrawler(BaseCrawler):
 
             # 匹配剧名并保存
             for item in results:
-                drama_id = self._match_drama(item['title'])
+                drama_id = self._match_drama(item['title'], drama_type='tv_drama')
                 if drama_id:
                     try:
                         self.save_heat_data(

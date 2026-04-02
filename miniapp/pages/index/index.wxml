@@ -10,7 +10,7 @@
 
     <!-- 搜索栏 -->
     <view class="search-bar" bindtap="goSearch">
-      <text class="search-icon-text">🔍</text>
+      <image class="search-icon" src="/images/icons/search-white.png" mode="aspectFit"></image>
       <text class="search-placeholder">搜索剧集、演员、导演</text>
     </view>
   </view>
@@ -20,7 +20,7 @@
     <text class="update-dot"></text>
     <text>实时数据 · 更新于 {{updateTime}}</text>
     <view class="refresh-btn" bindtap="refreshData">
-      <text class="refresh-icon-text">↻</text>
+      <image src="/images/icons/refresh.png" class="refresh-icon" mode="aspectFit"></image>
     </view>
   </view>
 
