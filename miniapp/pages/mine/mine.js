@@ -117,12 +117,6 @@ Page({
     this.setData({ darkMode })
   },
 
-  // 跳转追剧清单
-  goTrackingList(e) {
-    const tab = e.currentTarget.dataset.tab || ''
-    wx.navigateTo({ url: `/pages/tracking-list/tracking-list?tab=${tab}` })
-  },
-
   // 通用导航
   navigateTo(e) {
     const url = e.currentTarget.dataset.url

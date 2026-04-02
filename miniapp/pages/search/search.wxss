@@ -31,6 +31,22 @@
   flex-shrink: 0;
 }
 
+.search-input-icon-text {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.suggest-icon-text {
+  font-size: 24rpx;
+  margin-right: 12rpx;
+  opacity: 0.5;
+}
+
+.action-icon-text {
+  font-size: 28rpx;
+}
+
 .search-input {
   flex: 1;
   font-size: 28rpx;

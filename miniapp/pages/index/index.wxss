@@ -43,6 +43,11 @@
   margin-right: 16rpx;
 }
 
+.search-icon-text {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+}
+
 .search-placeholder {
   font-size: 26rpx;
   color: rgba(255, 255, 255, 0.7);
@@ -82,6 +87,11 @@
   width: 28rpx;
   height: 28rpx;
   opacity: 0.5;
+}
+
+.refresh-icon-text {
+  font-size: 28rpx;
+  color: var(--text-secondary);
 }
 
 /* 平台滚动 */
