@@ -22,7 +22,13 @@ Page({
 
   onShow() {
     const app = getApp()
-    this.setData({ darkMode: app.globalData.themeMode === 'dark' })
+    const darkMode = app.globalData.themeMode === 'dark'
+    this.setData({ darkMode })
+    wx.setBackgroundColor({
+      backgroundColor: darkMode ? '#171923' : '#f4f5f7',
+      backgroundColorTop: darkMode ? '#171923' : '#f4f5f7',
+      backgroundColorBottom: darkMode ? '#171923' : '#f4f5f7'
+    })
   },
 
   onPullDownRefresh() {

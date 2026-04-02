@@ -29,6 +29,11 @@ Page({
   checkDarkMode() {
     const darkMode = app.globalData.themeMode === 'dark'
     this.setData({ darkMode })
+    wx.setBackgroundColor({
+      backgroundColor: darkMode ? '#171923' : '#f4f5f7',
+      backgroundColorTop: darkMode ? '#171923' : '#f4f5f7',
+      backgroundColorBottom: darkMode ? '#171923' : '#f4f5f7'
+    })
   },
 
   // 加载用户信息
