@@ -30,8 +30,11 @@ class YoukuCrawler(BaseCrawler):
             variety_data = self._crawl_rank(category='综艺')
             results.extend(variety_data)
 
+            type_map = {'电视剧': 'tv_drama', '综艺': 'variety'}
+
             for item in results:
-                drama_id = self._match_drama(item['title'])
+                dtype = type_map.get(item.get('category'), 'tv_drama')
+                drama_id = self._match_drama(item['title'], drama_type=dtype)
                 if drama_id:
                     try:
                         self.save_heat_data(

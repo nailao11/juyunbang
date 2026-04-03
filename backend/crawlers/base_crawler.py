@@ -69,12 +69,13 @@ class BaseCrawler:
         title = title.strip()
         return title
 
-    def _match_drama(self, title):
+    def _match_drama(self, title, drama_type='tv_drama'):
         """
         将采集到的标题匹配到数据库中的drama_id。
         优先精确匹配，其次模糊匹配(LIKE)。
+        如果完全匹配不到，自动创建新剧集记录。
         结果会缓存以避免重复查询。
-        返回 drama_id 或 None。
+        返回 drama_id（始终不为 None）。
         """
         if not title:
             return None
@@ -87,7 +88,7 @@ class BaseCrawler:
         if normalized in BaseCrawler._drama_cache:
             return BaseCrawler._drama_cache[normalized]
 
-        from app.utils.db import query_one
+        from app.utils.db import query_one, insert
 
         try:
             # 1. 精确匹配
@@ -98,7 +99,6 @@ class BaseCrawler:
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
-                logger.debug(f"[{self.platform_name}] 精确匹配: '{normalized}' -> drama_id={drama_id}")
                 return drama_id
 
             # 2. 模糊匹配 (LIKE)
@@ -109,7 +109,6 @@ class BaseCrawler:
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
-                logger.debug(f"[{self.platform_name}] 模糊匹配: '{normalized}' -> drama_id={drama_id}")
                 return drama_id
 
             # 3. 反向模糊匹配：数据库中的标题是采集标题的子串
@@ -121,18 +120,23 @@ class BaseCrawler:
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
-                logger.debug(
-                    f"[{self.platform_name}] 反向模糊匹配: '{normalized}' -> "
-                    f"'{row['title']}' drama_id={drama_id}"
+                return drama_id
+
+            # 4. 未匹配到：自动创建新剧集
+            drama_id = insert(
+                "INSERT INTO dramas (title, type, status) VALUES (%s, %s, 'airing')",
+                (normalized, drama_type)
+            )
+            if drama_id:
+                BaseCrawler._drama_cache[normalized] = drama_id
+                logger.info(
+                    f"[{self.platform_name}] 自动创建新剧集: '{normalized}' -> drama_id={drama_id}"
                 )
                 return drama_id
 
         except Exception as e:
-            logger.error(f"[{self.platform_name}] 匹配剧名'{normalized}'失败: {e}")
+            logger.error(f"[{self.platform_name}] 匹配/创建剧名'{normalized}'失败: {e}")
 
-        # 未匹配到，缓存 None 防止重复查询
-        BaseCrawler._drama_cache[normalized] = None
-        logger.warning(f"[{self.platform_name}] 未匹配到剧名: '{normalized}'")
         return None
 
     @classmethod

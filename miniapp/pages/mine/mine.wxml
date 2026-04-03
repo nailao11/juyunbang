@@ -22,7 +22,7 @@
 
     <!-- 追剧统计 -->
     <view class="stats-row">
-      <view class="stat-item" bindtap="goTrackingList" data-tab="watching">
+      <view class="stat-item">
         <view class="stat-circle">
           <view class="circle-progress" style="background: conic-gradient(#667eea {{watchingPercent}}%, var(--border) 0);">
             <view class="circle-inner">
@@ -32,7 +32,7 @@
         </view>
         <text class="stat-label">在追</text>
       </view>
-      <view class="stat-item" bindtap="goTrackingList" data-tab="want">
+      <view class="stat-item">
         <view class="stat-circle">
           <view class="circle-progress" style="background: conic-gradient(#f093fb {{wantPercent}}%, var(--border) 0);">
             <view class="circle-inner">
@@ -42,7 +42,7 @@
         </view>
         <text class="stat-label">想看</text>
       </view>
-      <view class="stat-item" bindtap="goTrackingList" data-tab="watched">
+      <view class="stat-item">
         <view class="stat-circle">
           <view class="circle-progress" style="background: conic-gradient(#2dce89 {{watchedPercent}}%, var(--border) 0);">
             <view class="circle-inner">
@@ -62,10 +62,10 @@
       <view class="menu-group-title">实用工具</view>
       <view class="menu-item" bindtap="navigateTo" data-url="/pages/compare/compare">
         <view class="menu-icon-wrap" style="background: rgba(240,147,251,0.1);">
-          <text class="menu-icon-text">⚖</text>
+          <image class="menu-icon" src="/images/icons/compare.png" mode="aspectFit"></image>
         </view>
         <text class="menu-text">对比工具</text>
-        <text class="menu-arrow-text">›</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
       </view>
     </view>
 
@@ -74,7 +74,7 @@
       <view class="menu-group-title">设置与帮助</view>
       <view class="menu-item">
         <view class="menu-icon-wrap" style="background: rgba(50,50,93,0.1);">
-          <text class="menu-icon-text">🌙</text>
+          <image class="menu-icon" src="/images/icons/moon.png" mode="aspectFit"></image>
         </view>
         <text class="menu-text">深色模式</text>
         <switch class="dark-switch" checked="{{darkMode}}" bindchange="toggleDarkMode" color="#667eea"/>
@@ -82,18 +82,26 @@
       <view class="menu-divider"></view>
       <view class="menu-item" bindtap="navigateTo" data-url="/pages/data-explanation/data-explanation">
         <view class="menu-icon-wrap" style="background: rgba(102,126,234,0.1);">
-          <text class="menu-icon-text">📊</text>
+          <image class="menu-icon" src="/images/icons/info.png" mode="aspectFit"></image>
         </view>
         <text class="menu-text">数据说明</text>
-        <text class="menu-arrow-text">›</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
       </view>
       <view class="menu-divider"></view>
       <view class="menu-item" bindtap="navigateTo" data-url="/pages/feedback/feedback">
         <view class="menu-icon-wrap" style="background: rgba(251,99,64,0.1);">
-          <text class="menu-icon-text">💬</text>
+          <image class="menu-icon" src="/images/icons/feedback.png" mode="aspectFit"></image>
         </view>
         <text class="menu-text">意见反馈</text>
-        <text class="menu-arrow-text">›</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
+      </view>
+      <view class="menu-divider"></view>
+      <view class="menu-item" bindtap="navigateTo" data-url="/pages/about/about">
+        <view class="menu-icon-wrap" style="background: rgba(118,75,162,0.1);">
+          <image class="menu-icon" src="/images/icons/about.png" mode="aspectFit"></image>
+        </view>
+        <text class="menu-text">关于我们</text>
+        <image class="menu-arrow" src="/images/icons/arrow-right.png" mode="aspectFit"></image>
       </view>
     </view>
 

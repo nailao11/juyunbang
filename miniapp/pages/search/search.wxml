@@ -5,7 +5,7 @@
   <view class="search-header" style="padding-top: {{statusBarHeight}}px;">
     <view class="search-row">
       <view class="search-input-wrap">
-        <text class="search-input-icon-text">🔍</text>
+        <image class="search-input-icon" src="/images/icons/search.png" mode="aspectFit"></image>
         <input class="search-input" placeholder="搜索剧集、演员、导演"
                value="{{keyword}}" bindinput="onInput" bindconfirm="doSearch"
                focus="{{autoFocus}}" confirm-type="search" />
@@ -23,7 +23,7 @@
   <view class="suggest-list" wx:if="{{suggestList.length > 0 && !searched}}">
     <view class="suggest-item" wx:for="{{suggestList}}" wx:key="id"
           bindtap="tapSuggest" data-keyword="{{item.title}}" data-id="{{item.id}}">
-      <text class="suggest-icon-text">🔍</text>
+      <image class="suggest-icon" src="/images/icons/search.png" mode="aspectFit"></image>
       <text class="suggest-text">{{item.title}}</text>
       <text class="suggest-type" wx:if="{{item.type}}">{{item.type}}</text>
     </view>
@@ -36,7 +36,7 @@
       <view class="section-header-row">
         <text class="section-label">搜索历史</text>
         <view class="section-action" bindtap="clearHistory">
-          <text class="action-icon-text">🗑</text>
+          <image class="action-icon" src="/images/icons/delete.png" mode="aspectFit"></image>
         </view>
       </view>
       <view class="tag-wrap">
