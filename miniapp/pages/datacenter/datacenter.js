@@ -43,11 +43,16 @@ Page({
   onShow() {
     const darkMode = app.globalData.themeMode === 'dark'
     this.setData({ darkMode })
-    // 同步设置page元素背景色，消除深色模式下的白线
+    const bgColor = darkMode ? '#171923' : '#f4f5f7'
     wx.setBackgroundColor({
-      backgroundColor: darkMode ? '#171923' : '#f4f5f7',
-      backgroundColorTop: darkMode ? '#171923' : '#f4f5f7',
-      backgroundColorBottom: darkMode ? '#171923' : '#f4f5f7'
+      backgroundColor: bgColor,
+      backgroundColorTop: bgColor,
+      backgroundColorBottom: bgColor
+    })
+    wx.setNavigationBarColor({
+      frontColor: darkMode ? '#ffffff' : '#000000',
+      backgroundColor: bgColor,
+      animation: { duration: 0 }
     })
   },
 

@@ -10,22 +10,28 @@ heat_bp = Blueprint('heat', __name__)
 
 @heat_bp.route('/realtime/rank', methods=['GET'])
 def realtime_rank():
-    """获取实时热度排行榜"""
+    """获取实时热度排行榜（取每个剧+平台的最新一条记录）"""
     platform = request.args.get('platform', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 20)), 100)
+    limit = min(int(request.args.get('limit', 30)), 100)
     page = max(int(request.args.get('page', 1)), 1)
     offset = (page - 1) * limit
 
-    # 缓存键
     cache_key = f"heat:realtime:rank:{platform}:{drama_type}:{page}:{limit}"
     cached = cache_get(cache_key)
     if cached:
         return success(cached)
 
-    # 构建查询
-    where_clauses = ["hr.record_time >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)"]
-    params = []
+    # 找到最新采集时间（全局）
+    latest = query_one("SELECT MAX(record_time) as latest FROM heat_realtime")
+    if not latest or not latest['latest']:
+        return success({'list': [], 'total': 0, 'page': page, 'page_size': limit, 'update_time': None})
+
+    latest_time = latest['latest']
+
+    # 取最新一批数据（最近一次采集周期内的数据）
+    where_clauses = ["hr.record_time >= DATE_SUB(%s, INTERVAL 30 MINUTE)"]
+    params = [latest_time]
 
     if platform:
         where_clauses.append("p.short_name = %s")
@@ -35,48 +41,32 @@ def realtime_rank():
         where_clauses.append("d.type = %s")
         params.append(drama_type)
 
+    # 只显示在播剧
+    where_clauses.append("d.status = 'airing'")
+
     where_sql = " AND ".join(where_clauses)
 
-    # 获取最新一批数据的排行
     sql = f"""
         SELECT d.id, d.title, d.type, d.genre, d.region, d.status,
                d.poster_url, d.douban_score, d.current_episode, d.total_episodes,
                p.name as platform_name, p.short_name as platform_short,
                p.color as platform_color,
-               hr.heat_value, hr.heat_rank, hr.record_time,
-               prev.heat_value as prev_heat_value
+               hr.heat_value, hr.heat_rank, hr.record_time
         FROM heat_realtime hr
         JOIN dramas d ON hr.drama_id = d.id
         JOIN platforms p ON hr.platform_id = p.id
-        LEFT JOIN (
-            SELECT drama_id, platform_id, heat_value
-            FROM heat_realtime
-            WHERE record_time >= DATE_SUB(NOW(), INTERVAL 60 MINUTE)
-              AND record_time < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-        ) prev ON prev.drama_id = hr.drama_id AND prev.platform_id = hr.platform_id
         WHERE {where_sql}
         ORDER BY hr.heat_value DESC
         LIMIT %s OFFSET %s
     """
     params.extend([limit, offset])
-
     items = query(sql, tuple(params))
 
-    # 计算涨跌
     for item in items:
-        prev = item.pop('prev_heat_value', None)
-        if prev and prev > 0:
-            change = float(item['heat_value']) - float(prev)
-            change_pct = round(change / float(prev) * 100, 1)
-            item['heat_change'] = round(change, 2)
-            item['heat_change_pct'] = change_pct
-            item['trend'] = 'up' if change > 0 else ('down' if change < 0 else 'flat')
-        else:
-            item['heat_change'] = 0
-            item['heat_change_pct'] = 0
-            item['trend'] = 'new'
+        item['heat_change'] = 0
+        item['heat_change_pct'] = 0
+        item['trend'] = 'new'
 
-    # 获取总数
     count_sql = f"""
         SELECT COUNT(DISTINCT hr.drama_id) as total
         FROM heat_realtime hr
@@ -95,25 +85,32 @@ def realtime_rank():
         'update_time': items[0]['record_time'] if items else None
     }
 
-    cache_set(cache_key, result, expire=120)  # 缓存2分钟
+    cache_set(cache_key, result, expire=120)
     return success(result)
 
 
 @heat_bp.route('/realtime/all-rank', methods=['GET'])
 def all_platform_rank():
-    """全平台聚合热度排行"""
+    """全平台聚合热度排行 — 最新在播剧，最多30条"""
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 20)), 100)
+    limit = min(int(request.args.get('limit', 30)), 30)
 
     cache_key = f"heat:allrank:{drama_type}:{limit}"
     cached = cache_get(cache_key)
     if cached:
         return success(cached)
 
-    where_clause = ""
-    params = []
+    # 找到最新采集时间
+    latest = query_one("SELECT MAX(record_time) as latest FROM heat_realtime")
+    if not latest or not latest['latest']:
+        return success([])
+
+    latest_time = latest['latest']
+
+    where_clause = "AND d.status = 'airing'"
+    params = [latest_time]
     if drama_type:
-        where_clause = "AND d.type = %s"
+        where_clause += " AND d.type = %s"
         params.append(drama_type)
 
     sql = f"""
@@ -126,7 +123,7 @@ def all_platform_rank():
         FROM heat_realtime hr
         JOIN dramas d ON hr.drama_id = d.id
         JOIN platforms p ON hr.platform_id = p.id
-        WHERE hr.record_time >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+        WHERE hr.record_time >= DATE_SUB(%s, INTERVAL 30 MINUTE)
         {where_clause}
         GROUP BY d.id
         ORDER BY avg_heat DESC
@@ -148,7 +145,11 @@ def all_platform_rank():
 
 @heat_bp.route('/realtime/<int:drama_id>', methods=['GET'])
 def drama_realtime_heat(drama_id):
-    """获取某剧各平台实时热度"""
+    """获取某剧各平台实时热度（取最新采集的数据）"""
+    latest = query_one("SELECT MAX(record_time) as latest FROM heat_realtime WHERE drama_id = %s", (drama_id,))
+    if not latest or not latest['latest']:
+        return success([])
+
     sql = """
         SELECT p.name as platform_name, p.short_name as platform_short,
                p.color as platform_color,
@@ -156,10 +157,10 @@ def drama_realtime_heat(drama_id):
         FROM heat_realtime hr
         JOIN platforms p ON hr.platform_id = p.id
         WHERE hr.drama_id = %s
-          AND hr.record_time >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+          AND hr.record_time >= DATE_SUB(%s, INTERVAL 30 MINUTE)
         ORDER BY hr.heat_value DESC
     """
-    items = query(sql, (drama_id,))
+    items = query(sql, (drama_id, latest['latest']))
     return success(items)
 
 

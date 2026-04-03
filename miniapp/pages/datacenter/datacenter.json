@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "数据中心",
+  "navigationBarBackgroundColor": "#f4f5f7",
+  "navigationBarTextStyle": "black",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark"
 }

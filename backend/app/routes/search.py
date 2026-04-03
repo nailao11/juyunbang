@@ -30,7 +30,8 @@ def search():
         SELECT d.id, d.title, d.type, d.genre, d.region,
                d.poster_url, d.douban_score, d.status,
                d.current_episode, d.total_episodes, d.air_date,
-               d.director, d.cast_main
+               d.director, d.cast_main,
+               (SELECT MAX(hr.heat_value) FROM heat_realtime hr WHERE hr.drama_id = d.id) as heat_value
         FROM dramas d
         WHERE (d.title LIKE %s OR d.director LIKE %s OR d.cast_main LIKE %s)
         {where_extra}
