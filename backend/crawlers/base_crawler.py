@@ -17,25 +17,23 @@ class BaseCrawler:
     def __init__(self, platform_name):
         self.platform_name = platform_name
         self.session = requests.Session()
+        self.session.trust_env = False  # 忽略系统代理
         self.session.headers.update({
             'User-Agent': ua.random,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         })
+        # 本轮已保存的 drama_id+platform_id 集合，用于去重
+        self._saved_this_round = set()
 
     def fetch(self, url, params=None, headers=None, retry=3):
         """带重试的HTTP请求"""
         for i in range(retry):
             try:
-                # 随机延迟，避免被反爬
                 time.sleep(random.uniform(1, 3))
-
-                # 每次请求换一个UA
                 self.session.headers['User-Agent'] = ua.random
-
                 if headers:
                     self.session.headers.update(headers)
-
                 resp = self.session.get(url, params=params, timeout=30)
                 resp.raise_for_status()
                 return resp
@@ -63,18 +61,16 @@ class BaseCrawler:
         """标准化标题：去除多余空格、特殊符号等"""
         if not title:
             return ''
-        # 去除括号中的附加信息，如 "剧名(全网独播)" -> "剧名"
         title = re.sub(r'[（(][^)）]*[)）]', '', title)
-        # 去除首尾空白
         title = title.strip()
         return title
 
-    def _match_drama(self, title, drama_type='tv_drama'):
+    def _match_drama(self, title, drama_type='tv_drama', poster_url=''):
         """
         将采集到的标题匹配到数据库中的drama_id。
         优先精确匹配，其次模糊匹配(LIKE)。
         如果完全匹配不到，自动创建新剧集记录。
-        结果会缓存以避免重复查询。
+        如果匹配到的剧缺少封面，自动补充网络封面URL。
         返回 drama_id（始终不为 None）。
         """
         if not title:
@@ -86,51 +82,62 @@ class BaseCrawler:
 
         # 检查缓存
         if normalized in BaseCrawler._drama_cache:
-            return BaseCrawler._drama_cache[normalized]
+            drama_id = BaseCrawler._drama_cache[normalized]
+            # 即使命中缓存，如果有封面URL也尝试补充
+            if poster_url:
+                self._update_poster_if_empty(drama_id, poster_url)
+            return drama_id
 
-        from app.utils.db import query_one, insert
+        from app.utils.db import query_one, insert, execute
 
         try:
             # 1. 精确匹配
             row = query_one(
-                "SELECT id FROM dramas WHERE title = %s LIMIT 1",
+                "SELECT id, poster_url FROM dramas WHERE title = %s LIMIT 1",
                 (normalized,)
             )
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
+                if poster_url and not row.get('poster_url'):
+                    self._update_poster_if_empty(drama_id, poster_url)
                 return drama_id
 
             # 2. 模糊匹配 (LIKE)
             row = query_one(
-                "SELECT id FROM dramas WHERE title LIKE %s LIMIT 1",
+                "SELECT id, poster_url FROM dramas WHERE title LIKE %s LIMIT 1",
                 (f'%{normalized}%',)
             )
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
+                if poster_url and not row.get('poster_url'):
+                    self._update_poster_if_empty(drama_id, poster_url)
                 return drama_id
 
-            # 3. 反向模糊匹配：数据库中的标题是采集标题的子串
+            # 3. 反向模糊匹配
             row = query_one(
-                "SELECT id, title FROM dramas WHERE %s LIKE CONCAT('%%', title, '%%') "
+                "SELECT id, title, poster_url FROM dramas WHERE %s LIKE CONCAT('%%', title, '%%') "
                 "AND CHAR_LENGTH(title) >= 2 ORDER BY CHAR_LENGTH(title) DESC LIMIT 1",
                 (normalized,)
             )
             if row:
                 drama_id = row['id']
                 BaseCrawler._drama_cache[normalized] = drama_id
+                if poster_url and not row.get('poster_url'):
+                    self._update_poster_if_empty(drama_id, poster_url)
                 return drama_id
 
-            # 4. 未匹配到：自动创建新剧集
+            # 4. 未匹配到：自动创建新剧集（含封面URL）
             drama_id = insert(
-                "INSERT INTO dramas (title, type, status) VALUES (%s, %s, 'airing')",
-                (normalized, drama_type)
+                "INSERT INTO dramas (title, type, status, poster_url) VALUES (%s, %s, 'airing', %s)",
+                (normalized, drama_type, poster_url or None)
             )
             if drama_id:
                 BaseCrawler._drama_cache[normalized] = drama_id
                 logger.info(
-                    f"[{self.platform_name}] 自动创建新剧集: '{normalized}' -> drama_id={drama_id}"
+                    f"[{self.platform_name}] 自动创建新剧集: '{normalized}' -> id={drama_id}"
+                    f"{' (含封面)' if poster_url else ''}"
                 )
                 return drama_id
 
@@ -138,6 +145,19 @@ class BaseCrawler:
             logger.error(f"[{self.platform_name}] 匹配/创建剧名'{normalized}'失败: {e}")
 
         return None
+
+    def _update_poster_if_empty(self, drama_id, poster_url):
+        """如果剧集缺少封面，用网络URL补充"""
+        if not poster_url:
+            return
+        try:
+            from app.utils.db import execute
+            execute(
+                "UPDATE dramas SET poster_url = %s WHERE id = %s AND (poster_url IS NULL OR poster_url = '')",
+                (poster_url, drama_id)
+            )
+        except Exception as e:
+            logger.debug(f"[{self.platform_name}] 更新封面失败: {e}")
 
     @classmethod
     def clear_drama_cache(cls):
@@ -149,7 +169,15 @@ class BaseCrawler:
         raise NotImplementedError
 
     def save_heat_data(self, drama_id, platform_id, heat_value, heat_rank=None):
-        """保存实时热度数据到数据库"""
+        """
+        保存实时热度数据到数据库。
+        同一轮采集中，同一个drama_id+platform_id只保存一次（去重）。
+        """
+        dedup_key = (drama_id, platform_id)
+        if dedup_key in self._saved_this_round:
+            return  # 本轮已采集过，跳过
+        self._saved_this_round.add(dedup_key)
+
         from app.utils.db import insert
         from datetime import datetime
 
@@ -171,15 +199,7 @@ class BaseCrawler:
         )
 
     def save_social_data(self, drama_id, **kwargs):
-        """
-        保存社交媒体数据到 social_daily 表。
-        使用 ON DUPLICATE KEY UPDATE 保证每日每剧一条记录。
-
-        可选参数对应 social_daily 表的列：
-            weibo_topic_read_incr, weibo_topic_discuss_incr,
-            weibo_hot_search_count, douyin_topic_views_incr,
-            douyin_video_count, baidu_index, wechat_index
-        """
+        """保存社交媒体数据到 social_daily 表"""
         from app.utils.db import execute
         from datetime import date
 

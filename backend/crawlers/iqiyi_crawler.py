@@ -4,7 +4,7 @@ from .base_crawler import BaseCrawler
 
 
 class IqiyiCrawler(BaseCrawler):
-    """爱奇艺热度采集器"""
+    """爱奇艺热度采集器 — 多接口备用策略"""
 
     PLATFORM_ID = 1
 
@@ -28,7 +28,11 @@ class IqiyiCrawler(BaseCrawler):
 
             for item in results:
                 dtype = type_map.get(item.get('category'), 'tv_drama')
-                drama_id = self._match_drama(item['title'], drama_type=dtype)
+                drama_id = self._match_drama(
+                    item['title'],
+                    drama_type=dtype,
+                    poster_url=item.get('poster_url', '')
+                )
                 if drama_id:
                     try:
                         self.save_heat_data(
@@ -51,24 +55,20 @@ class IqiyiCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='tv'):
-        """采集指定分类的排行，多个API端点备用"""
-        items = []
-
-        # 方式1: 尝试主API
+        """多接口采集"""
         items = self._crawl_main_api(category)
         if items:
             return items
 
-        # 方式2: 备用API - PCW接口
         items = self._crawl_pcw_api(category)
         if items:
             return items
 
-        logger.warning(f"[爱奇艺] {category}类别所有API均失败")
+        logger.warning(f"[爱奇艺] {category}所有API均失败")
         return []
 
     def _crawl_main_api(self, category):
-        """主API接口"""
+        """主API: mesh接口"""
         url = 'https://mesh.if.iqiyi.com/portal/lw/videolib/data/rank'
         params = {
             'type': 'heat',
@@ -86,21 +86,23 @@ class IqiyiCrawler(BaseCrawler):
             for i, item in enumerate(rank_list):
                 title = item.get('name', '')
                 heat = item.get('hot', 0)
+                poster = item.get('imageUrl', '') or item.get('img', '') or item.get('pic', '') or ''
                 if title and heat:
                     items.append({
                         'title': title,
                         'heat_value': heat,
+                        'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'platform': 'iqiyi'
                     })
         except Exception as e:
-            logger.error(f"[爱奇艺] 解析主API {category}排行失败: {e}")
+            logger.error(f"[爱奇艺] 解析主API {category}失败: {e}")
 
         return items
 
     def _crawl_pcw_api(self, category):
-        """备用PCW API接口"""
+        """备用: PCW接口"""
         url = 'https://pcw-api.iqiyi.com/search/recommend/list'
         channel_map = {'tv': '2', 'variety': '6'}
         params = {
@@ -121,17 +123,19 @@ class IqiyiCrawler(BaseCrawler):
             for i, item in enumerate(item_list):
                 title = item.get('title', item.get('name', ''))
                 heat = item.get('hot', item.get('play_count', 0))
+                poster = item.get('imageUrl', '') or item.get('img', '') or ''
                 if not heat:
                     heat = max(0, 10000 - i * 200)
                 if title:
                     items.append({
                         'title': title,
                         'heat_value': heat,
+                        'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'platform': 'iqiyi'
                     })
         except Exception as e:
-            logger.error(f"[爱奇艺] 解析备用API {category}排行失败: {e}")
+            logger.error(f"[爱奇艺] 解析备用API {category}失败: {e}")
 
         return items
