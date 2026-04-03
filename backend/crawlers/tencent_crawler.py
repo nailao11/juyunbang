@@ -5,25 +5,21 @@ from .base_crawler import BaseCrawler
 
 
 class TencentCrawler(BaseCrawler):
-    """腾讯视频热度采集器 — 使用腾讯视频内部API"""
+    """腾讯视频热度采集器 — 多接口策略"""
 
     PLATFORM_ID = 3
 
-    # 腾讯视频排行数据接口（POST请求，返回JSON）
-    RANK_API = 'https://pbaccess.video.qq.com/trpc.vector_layout.page_view.PageService/getPage'
-
-    # 频道ID映射
     CHANNEL_MAP = {
-        'tv': 100113,       # 电视剧
-        'variety': 100109,  # 综艺
-        'anime': 100119,    # 动漫
+        'tv': 100113,
+        'variety': 100109,
+        'anime': 100119,
     }
 
     def __init__(self):
         super().__init__('腾讯视频')
 
     def crawl(self):
-        """采集腾讯视频热搜榜，匹配剧名并保存到数据库"""
+        """采集腾讯视频热搜榜"""
         logger.info("[腾讯视频] 开始采集热度数据...")
         results = []
         saved_count = 0
@@ -39,7 +35,11 @@ class TencentCrawler(BaseCrawler):
 
             for item in results:
                 dtype = type_map.get(item.get('category'), 'tv_drama')
-                drama_id = self._match_drama(item['title'], drama_type=dtype)
+                drama_id = self._match_drama(
+                    item['title'],
+                    drama_type=dtype,
+                    poster_url=item.get('poster_url', '')
+                )
                 if drama_id:
                     try:
                         self.save_heat_data(
@@ -49,18 +49,11 @@ class TencentCrawler(BaseCrawler):
                             heat_rank=item.get('rank'),
                         )
                         saved_count += 1
-                        logger.debug(
-                            f"[腾讯视频] 保存成功: {item['title']} "
-                            f"热度={item['heat_value']} 排名={item.get('rank')}"
-                        )
                     except Exception as e:
                         logger.error(f"[腾讯视频] 保存失败 {item['title']}: {e}")
 
             self.log_task('tencent_heat', 'success', saved_count)
-            logger.info(
-                f"[腾讯视频] 采集完成，共{len(results)}条数据，"
-                f"成功匹配并保存{saved_count}条"
-            )
+            logger.info(f"[腾讯视频] 采集完成，共{len(results)}条，保存{saved_count}条")
 
         except Exception as e:
             logger.error(f"[腾讯视频] 采集异常: {e}")
@@ -69,23 +62,28 @@ class TencentCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='tv'):
-        """通过腾讯视频内部API采集排行"""
+        """多接口策略采集排行"""
         channel_id = self.CHANNEL_MAP.get(category, self.CHANNEL_MAP['tv'])
 
-        # 方式1：使用腾讯视频的 pbaccess API（POST请求）
+        # 方式1: pbaccess API
         items = self._fetch_from_api(channel_id, category)
+        if items:
+            return items
 
-        if not items:
-            # 方式2：使用腾讯视频的H5热播接口
-            logger.warning(f"[腾讯视频] 主接口无数据，尝试H5接口采集{category}")
-            items = self._fetch_from_h5(category)
+        # 方式2: H5热播接口
+        logger.warning(f"[腾讯视频] 主接口无数据，尝试H5接口 {category}")
+        items = self._fetch_from_h5(category)
+        if items:
+            return items
 
+        # 方式3: 热搜榜API
+        logger.warning(f"[腾讯视频] H5接口也无数据，尝试热搜榜 {category}")
+        items = self._fetch_from_hot_search(category)
         return items
 
     def _fetch_from_api(self, channel_id, category):
-        """使用pbaccess内部API获取排行数据"""
-        import time
-        import random
+        """使用pbaccess内部API"""
+        import time, random
 
         headers = {
             'Content-Type': 'application/json',
@@ -94,27 +92,20 @@ class TencentCrawler(BaseCrawler):
         }
 
         body = {
-            'page_context': {
-                'page_index': '0',
-            },
+            'page_context': {'page_index': '0'},
             'page_params': {
                 'page_id': 'channel_list_second_page',
                 'page_type': 'operation',
                 'channel_id': str(channel_id),
-                'filter_params': 'sort=75',  # 按热度排序
+                'filter_params': 'sort=75',
                 'page': '0',
             },
             'page_bypass_params': {
                 'params': {
-                    'page_size': '30',
-                    'page_num': '0',
-                    'caller_id': '3000010',
-                    'platform_id': '2',
+                    'page_size': '30', 'page_num': '0',
+                    'caller_id': '3000010', 'platform_id': '2',
                 },
-                'global_params': {
-                    'ckey': '',
-                    'vuession': '',
-                },
+                'global_params': {'ckey': '', 'vuession': ''},
             },
         }
 
@@ -122,10 +113,8 @@ class TencentCrawler(BaseCrawler):
 
         try:
             resp = self.session.post(
-                self.RANK_API,
-                json=body,
-                headers=headers,
-                timeout=30
+                'https://pbaccess.video.qq.com/trpc.vector_layout.page_view.PageService/getPage',
+                json=body, headers=headers, timeout=30
             )
             resp.raise_for_status()
             data = resp.json()
@@ -135,30 +124,27 @@ class TencentCrawler(BaseCrawler):
 
         items = []
         try:
-            # 解析腾讯视频API返回结构
             card_list = (
                 data.get('data', {}).get('CardList', []) or
-                data.get('data', {}).get('card_list', []) or
-                []
+                data.get('data', {}).get('card_list', []) or []
             )
 
             for card in card_list:
                 children = (
                     card.get('children_list', {}).get('list', {}).get('cards', []) or
-                    card.get('card', {}).get('card_data', {}).get('cards', []) or
-                    []
+                    card.get('card', {}).get('card_data', {}).get('cards', []) or []
                 )
                 for i, child in enumerate(children[:30]):
                     params = child.get('params', {})
-                    title = (
-                        params.get('title', '') or
-                        params.get('show_title', '') or
-                        child.get('title', '')
-                    )
-                    heat = (
-                        params.get('hot_value', 0) or
-                        params.get('score', 0) or
-                        0
+                    title = params.get('title', '') or params.get('show_title', '') or child.get('title', '')
+                    heat = params.get('hot_value', 0) or params.get('score', 0) or 0
+                    # 封面：尝试多种字段
+                    poster = (
+                        params.get('new_pic_hz', '') or
+                        params.get('image_url', '') or
+                        params.get('pic', '') or
+                        params.get('pic_hz', '') or
+                        ''
                     )
 
                     if title:
@@ -170,13 +156,14 @@ class TencentCrawler(BaseCrawler):
                         items.append({
                             'title': self._normalize_title(title),
                             'heat_value': heat_value,
+                            'poster_url': poster,
                             'rank': i + 1,
                             'category': category,
                             'platform': 'tencent'
                         })
 
                 if items:
-                    break  # 找到排行数据就停止
+                    break
 
         except Exception as e:
             logger.error(f"[腾讯视频] 解析API响应失败: {e}")
@@ -184,19 +171,12 @@ class TencentCrawler(BaseCrawler):
         return items
 
     def _fetch_from_h5(self, category):
-        """备用方式：使用腾讯视频H5热播接口"""
-        category_map = {
-            'tv': 2,       # 电视剧
-            'variety': 10,  # 综艺
-        }
+        """备用: H5热播接口"""
+        category_map = {'tv': 2, 'variety': 10}
         cid = category_map.get(category, 2)
 
         url = 'https://i.q.qq.com/sns_vip/hot_play_data'
-        params = {
-            'cid': cid,
-            'type': 2,
-            'otype': 'json',
-        }
+        params = {'cid': cid, 'type': 2, 'otype': 'json'}
 
         data = self.fetch_json(url, params=params)
         if not data:
@@ -208,17 +188,64 @@ class TencentCrawler(BaseCrawler):
             for i, show in enumerate(play_list[:30]):
                 title = show.get('title', '') or show.get('name', '')
                 heat = show.get('hot', 0) or show.get('heat', 0) or 0
+                poster = show.get('pic', '') or show.get('cover', '') or ''
 
                 if title:
                     items.append({
                         'title': self._normalize_title(title),
                         'heat_value': float(heat),
+                        'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'platform': 'tencent'
                     })
-
         except Exception as e:
             logger.error(f"[腾讯视频] H5接口解析失败: {e}")
+
+        return items
+
+    def _fetch_from_hot_search(self, category):
+        """备用: 腾讯视频热搜榜接口"""
+        url = 'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp'
+        headers = {
+            'Content-Type': 'application/json',
+            'Referer': 'https://v.qq.com/',
+            'Origin': 'https://v.qq.com',
+        }
+
+        channel_map = {'tv': '100113', 'variety': '100109'}
+        body = {
+            'pageNum': 0,
+            'pageSize': 30,
+            'channelId': channel_map.get(category, '100113'),
+        }
+
+        try:
+            resp = self.session.post(url, json=body, headers=headers, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"[腾讯视频] 热搜榜接口失败: {e}")
+            return []
+
+        items = []
+        try:
+            item_list = data.get('data', {}).get('itemList', []) or []
+            for i, show in enumerate(item_list[:30]):
+                title = show.get('title', '')
+                heat = show.get('heatScore', 0) or show.get('hotValue', 0)
+                poster = show.get('picUrl', '') or show.get('imgUrl', '') or ''
+
+                if title:
+                    items.append({
+                        'title': self._normalize_title(title),
+                        'heat_value': float(heat),
+                        'poster_url': poster,
+                        'rank': i + 1,
+                        'category': category,
+                        'platform': 'tencent'
+                    })
+        except Exception as e:
+            logger.error(f"[腾讯视频] 热搜榜解析失败: {e}")
 
         return items

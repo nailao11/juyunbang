@@ -5,28 +5,23 @@ from .base_crawler import BaseCrawler
 
 
 class YoukuCrawler(BaseCrawler):
-    """优酷热度采集器 — 使用优酷内部JSON接口"""
+    """优酷热度采集器 — 多接口策略"""
 
     PLATFORM_ID = 2
-
-    # 优酷移动端排行接口（返回JSON，无需JS渲染）
-    RANK_API = 'https://acs.youku.com/h5/mtop.youku.columbus.gateway.new.execute/1.0/'
 
     def __init__(self):
         super().__init__('优酷')
 
     def crawl(self):
-        """采集优酷热播榜，匹配剧名并保存到数据库"""
+        """采集优酷热播榜"""
         logger.info("[优酷] 开始采集热度数据...")
         results = []
         saved_count = 0
 
         try:
-            # 电视剧热度榜
             tv_data = self._crawl_rank(category='电视剧')
             results.extend(tv_data)
 
-            # 综艺热度榜
             variety_data = self._crawl_rank(category='综艺')
             results.extend(variety_data)
 
@@ -34,7 +29,11 @@ class YoukuCrawler(BaseCrawler):
 
             for item in results:
                 dtype = type_map.get(item.get('category'), 'tv_drama')
-                drama_id = self._match_drama(item['title'], drama_type=dtype)
+                drama_id = self._match_drama(
+                    item['title'],
+                    drama_type=dtype,
+                    poster_url=item.get('poster_url', '')
+                )
                 if drama_id:
                     try:
                         self.save_heat_data(
@@ -44,18 +43,11 @@ class YoukuCrawler(BaseCrawler):
                             heat_rank=item.get('rank'),
                         )
                         saved_count += 1
-                        logger.debug(
-                            f"[优酷] 保存成功: {item['title']} "
-                            f"热度={item['heat_value']} 排名={item.get('rank')}"
-                        )
                     except Exception as e:
                         logger.error(f"[优酷] 保存失败 {item['title']}: {e}")
 
             self.log_task('youku_heat', 'success', saved_count)
-            logger.info(
-                f"[优酷] 采集完成，共{len(results)}条数据，"
-                f"成功匹配并保存{saved_count}条"
-            )
+            logger.info(f"[优酷] 采集完成，共{len(results)}条，保存{saved_count}条")
 
         except Exception as e:
             logger.error(f"[优酷] 采集异常: {e}")
@@ -64,25 +56,26 @@ class YoukuCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='电视剧'):
-        """
-        通过优酷移动端接口采集排行。
-        优酷H5页面的数据来自内部网关接口，返回JSON。
-        """
-        # 方式1：优酷移动版排行页（服务端渲染，可以解析）
-        category_map = {
-            '电视剧': '97',
-            '综艺': '85',
-        }
+        """多接口策略"""
+        category_map = {'电视剧': '97', '综艺': '85'}
         cid = category_map.get(category, '97')
 
-        url = f'https://www.youku.com/category/show/c_{cid}.html'
+        # 方式1: 优酷移动端网关API
+        items = self._fetch_from_api(cid, category)
+        if items:
+            return items
+
+        # 方式2: 优酷列表页HTML解析
+        logger.warning(f"[优酷] 主接口无数据，尝试备用 {category}")
+        items = self._crawl_rank_fallback(cid, category)
+        return items
+
+    def _fetch_from_api(self, cid, category):
+        """移动端网关API"""
+        url = 'https://acs.youku.com/h5/mtop.youku.columbus.gateway.new.execute/1.0/'
         headers = {
             'Referer': 'https://www.youku.com/',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         }
-
-        # 尝试移动端API
-        mobile_url = f'https://acs.youku.com/h5/mtop.youku.columbus.gateway.new.execute/1.0/'
         params = {
             'jsv': '2.7.2',
             'appKey': '24679788',
@@ -94,76 +87,52 @@ class YoukuCrawler(BaseCrawler):
             })
         }
 
-        data = self.fetch_json(mobile_url, params=params, headers=headers)
-        items = []
+        data = self.fetch_json(url, params=params, headers=headers)
+        if not data:
+            return []
 
-        if data:
-            items = self._parse_api_response(data, category)
-
-        if not items:
-            # 回退方式：尝试优酷的公开排行数据接口
-            fallback_url = f'https://list.youku.com/category/show/c_{cid}/s_1_d_1.html'
-            logger.warning(f"[优酷] 主接口无数据，尝试备用方式采集{category}")
-            items = self._crawl_rank_fallback(fallback_url, category)
-
-        return items
-
-    def _parse_api_response(self, data, category):
-        """解析优酷API返回的JSON数据"""
         items = []
         try:
-            # 优酷网关返回的数据结构
             result = data.get('data', {})
             if isinstance(result, str):
                 result = json.loads(result)
 
-            # 尝试多种可能的数据路径
             show_list = (
                 result.get('data', {}).get('nodes', []) or
                 result.get('nodes', []) or
-                result.get('list', []) or
-                []
+                result.get('list', []) or []
             )
 
             for i, show in enumerate(show_list[:30]):
-                title = (
-                    show.get('title', '') or
-                    show.get('show_name', '') or
-                    show.get('name', '')
-                )
-                heat = (
-                    show.get('heat', 0) or
-                    show.get('hot_value', 0) or
-                    show.get('total_vv', 0) or
-                    0
-                )
+                title = show.get('title', '') or show.get('show_name', '') or show.get('name', '')
+                heat = show.get('heat', 0) or show.get('hot_value', 0) or show.get('total_vv', 0) or 0
+                poster = show.get('img', '') or show.get('cover', '') or show.get('thumb_url', '') or ''
 
                 if title:
                     items.append({
                         'title': self._normalize_title(title),
                         'heat_value': float(heat),
+                        'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'platform': 'youku'
                     })
-
         except Exception as e:
             logger.error(f"[优酷] 解析API响应失败: {e}")
 
         return items
 
-    def _crawl_rank_fallback(self, url, category):
-        """备用方式：从列表页提取数据"""
-        from bs4 import BeautifulSoup
-
+    def _crawl_rank_fallback(self, cid, category):
+        """备用: HTML列表页"""
+        url = f'https://list.youku.com/category/show/c_{cid}/s_1_d_1.html'
         resp = self.fetch(url)
         if not resp:
             return []
 
         items = []
         try:
-            soup = BeautifulSoup(resp.text, 'lxml')
-            # 优酷列表页的结构
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(resp.text, 'html.parser')
             show_items = soup.select('.pack-film-card, .p-thumb, li[data-id]')
 
             for i, item in enumerate(show_items[:30]):
@@ -172,15 +141,21 @@ class YoukuCrawler(BaseCrawler):
                 if title_el:
                     title = title_el.get('title', '') or title_el.get_text(strip=True)
 
+                # 提取封面图
+                img_el = item.select_one('img')
+                poster = ''
+                if img_el:
+                    poster = img_el.get('src', '') or img_el.get('data-src', '') or ''
+
                 if title:
                     items.append({
                         'title': self._normalize_title(title),
-                        'heat_value': max(0, 10000 - i * 300),  # 按排名估算热度
+                        'heat_value': max(0, 10000 - i * 300),
+                        'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'platform': 'youku'
                     })
-
         except Exception as e:
             logger.error(f"[优酷] 备用解析失败: {e}")
 
