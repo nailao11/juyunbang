@@ -1,9 +1,6 @@
 <!--pages/datacenter/datacenter.wxml - 数据中心-->
 <view class="page-bg {{darkMode ? 'dark-mode' : ''}}">
 
-  <!-- 顶部衔接色块，消除导航栏与内容之间的缝隙 -->
-  <view class="dc-top-bridge"></view>
-
   <!-- 日期选择器 -->
   <view class="date-picker card">
     <view class="date-nav" bindtap="prevDay">
