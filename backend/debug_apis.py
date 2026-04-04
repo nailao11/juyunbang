@@ -313,12 +313,18 @@ def debug_mgtv(session):
     # --- 2. 其他排行API ---
     print("\n--- [2] 其他排行API ---")
     for name, url, params in [
+        ('top.bz getHitList', 'https://top.bz.mgtv.com/client/getHitList',
+         {'channelId': '2', 'pageNo': '1', 'pageSize': '5'}),
+        ('top.bz getTopList', 'https://top.bz.mgtv.com/client/getTopList',
+         {'channelId': '2'}),
+        ('top.bz getRuleInfo', 'https://top.bz.mgtv.com/client/getRuleInfo',
+         {}),
         ('channelrank', 'https://vc.mgtv.com/v2/list/channelrank',
          {'channelId': '2', 'pageNo': '1', 'pageSize': '5'}),
+        ('pcweb rank', 'https://pcweb.api.mgtv.com/video/rank',
+         {'channelId': '2', 'pageSize': '5'}),
         ('mobile rank', 'https://mobile.api.mgtv.com/v8/video/rank',
          {'channelId': '2', 'pageNo': '1', 'pageSize': '5'}),
-        ('dynamicList', 'https://vc.mgtv.com/v2/dynamicList',
-         {'channelId': '2', 'pageNo': '1', 'pageSize': '5', 'kind': 'a1'}),
     ]:
         try:
             resp = session.get(url, params=params, timeout=15)
@@ -404,7 +410,10 @@ def debug_youku(session):
 
     # --- 2. 排行页HTML ---
     print("\n--- [2] 排行页HTML ---")
-    for url in ['https://www.youku.com/rank', 'https://www.youku.com/category/show/c_97_s_1_d_1.html']:
+    for url in ['https://acz.youku.com/wow/ykpage/act/top_hot',
+                 'http://top.youku.com/rank/',
+                 'https://www.youku.com/rank',
+                 'https://www.youku.com/category/show/c_97_s_1_d_1.html']:
         try:
             resp = session.get(url, headers={'Referer': 'https://www.youku.com/'}, timeout=15)
             text = resp.text

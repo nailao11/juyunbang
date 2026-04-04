@@ -82,18 +82,23 @@ class MgtvCrawler(BaseCrawler):
         """尝试多种芒果TV排行榜API"""
 
         # 排行榜API候选列表
+        # 注意: pianku.api是片库API，热度字段永远为0
+        # 真正的排行API在 top.bz.mgtv.com 域名下
         api_list = [
-            # 热度排行API
+            # 芒果TV官方排行系统（最可能有真实热度）
+            ('https://top.bz.mgtv.com/client/getHitList',
+             {'channelId': channel_id, 'pageNo': '1', 'pageSize': '30'}),
+            ('https://top.bz.mgtv.com/client/getTopList',
+             {'channelId': channel_id}),
+            # 频道排行API
             ('https://vc.mgtv.com/v2/list/channelrank',
              {'channelId': channel_id, 'pageNo': '1', 'pageSize': '30'}),
+            # pcweb排行API
+            ('https://pcweb.api.mgtv.com/video/rank',
+             {'channelId': channel_id, 'pageSize': '30'}),
             # 移动端排行API
             ('https://mobile.api.mgtv.com/v8/video/rank',
              {'channelId': channel_id, 'pageNo': '1', 'pageSize': '30'}),
-            # pcweb排行（按热度排序）
-            ('https://pianku.api.mgtv.com/rider/list/pcweb/v3',
-             {'allowedRC': '1', 'platform': 'pcweb', 'channelId': channel_id,
-              'pn': '1', 'pc': '30', 'hudong': '1', 'orderType': 'c2',
-              '_support': '10000000'}),
             # 热播推荐
             ('https://vc.mgtv.com/v2/dynamicList',
              {'channelId': channel_id, 'pageNo': '1', 'pageSize': '30',

@@ -87,6 +87,9 @@ class YoukuCrawler(BaseCrawler):
         cat = cid_map.get(cid, 'tv')
 
         urls = [
+            # 优酷官方热度榜
+            'https://acz.youku.com/wow/ykpage/act/top_hot',
+            f'http://top.youku.com/rank/',
             f'https://www.youku.com/rank/{cat}',
             'https://www.youku.com/rank',
             f'https://www.youku.com/category/show/c_{cid}_s_1_d_1.html',
