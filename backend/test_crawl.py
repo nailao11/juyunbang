@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-剧云榜 — 爬虫测试脚本 v2
-测试各平台API可用性，并显示在播剧排行。
+剧云榜 — 爬虫测试脚本 v3
+测试四大平台（爱奇艺、腾讯视频、优酷、芒果TV）API可用性。
 
 使用方法:
     cd /opt/juyunbang/backend
@@ -28,47 +28,6 @@ def create_session():
     return s
 
 
-def test_bilibili():
-    print("\n" + "=" * 60)
-    print("【B站】测试排行榜API（过滤已完结剧）")
-    print("=" * 60)
-
-    session = create_session()
-    results = []
-    for season_type, cat_name in [('5', '电视剧'), ('7', '综艺'), ('1', '番剧')]:
-        try:
-            resp = session.get(
-                'https://api.bilibili.com/pgc/web/rank/list',
-                params={'day': '3', 'season_type': season_type}, timeout=15
-            )
-            data = resp.json()
-            if data.get('code') == 0:
-                rank_list = data.get('result', {}).get('list', [])
-                airing = []
-                finished = 0
-                for item in rank_list:
-                    title = item.get('title', '')
-                    heat = item.get('stat', {}).get('view', 0)
-                    cover = item.get('ss_horizontal_cover', '') or item.get('cover', '')
-                    is_finish = item.get('is_finish', 0)
-                    new_ep = item.get('new_ep', {})
-                    index_show = new_ep.get('index_show', '')
-                    if is_finish == 1 or '全' in index_show:
-                        finished += 1
-                        continue
-                    airing.append({'title': title, 'heat': heat, 'cover': cover})
-
-                print(f"\n  ✅ B站{cat_name}: 总{len(rank_list)}条, 在播{len(airing)}条, 已完结{finished}条")
-                for i, item in enumerate(airing[:5]):
-                    print(f"     [{i+1}] {item['title']} | 播放={item['heat']:,} | 封面={'✅' if item['cover'] else '❌'}")
-                results.extend(airing[:5])
-            else:
-                print(f"  ❌ B站{cat_name}: code={data.get('code')}")
-        except Exception as e:
-            print(f"  ❌ B站{cat_name}: {e}")
-    return results
-
-
 def test_tencent():
     print("\n" + "=" * 60)
     print("【腾讯视频】测试多种API接口")
@@ -78,45 +37,12 @@ def test_tencent():
     results = []
 
     for channel, cat_name in [('tv', '电视剧'), ('variety', '综艺')]:
-        # 方式1: Web列表API
+        channel_map = {'tv': '100113', 'variety': '100109'}
         print(f"\n  --- {cat_name} ---")
-        print(f"  [1] 测试 bu/pagesheet/list ...")
+
+        # 方式1: 热搜榜
+        print(f"  [1] 测试热搜榜接口 ...")
         try:
-            resp = session.get('https://v.qq.com/x/bu/pagesheet/list', params={
-                '_all': '1', 'append': '1', 'channel': channel,
-                'listpage': '2', 'offset': '0', 'pagesize': '30', 'sort': '75'
-            }, headers={'Referer': 'https://v.qq.com/channel/tv'}, timeout=15)
-
-            found = []
-            try:
-                data = resp.json()
-                item_list = data.get('list', []) or data.get('data', {}).get('list', []) or []
-                for i, show in enumerate(item_list[:5]):
-                    title = show.get('title', '')
-                    heat = show.get('hotVal', 0)
-                    poster = show.get('pic160x90', '') or show.get('pic', '')
-                    if title:
-                        found.append({'title': title, 'heat': heat, 'cover': poster})
-            except Exception:
-                # 可能返回HTML
-                text = resp.text[:200]
-                print(f"      返回非JSON: {text[:100]}...")
-
-            if found:
-                print(f"  ✅ 腾讯{cat_name}(Web API): 共 {len(found)} 条")
-                for i, item in enumerate(found[:3]):
-                    print(f"     [{i+1}] {item['title']} | 热度={item['heat']} | 封面={'✅' if item['cover'] else '❌'}")
-                results.extend(found[:3])
-                continue
-            else:
-                print(f"      Web API无数据")
-        except Exception as e:
-            print(f"      Web API失败: {e}")
-
-        # 方式2: 热搜榜
-        print(f"  [2] 测试热搜榜接口 ...")
-        try:
-            channel_map = {'tv': '100113', 'variety': '100109'}
             resp = session.post(
                 'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp',
                 json={'pageNum': 0, 'pageSize': 30, 'channelId': channel_map.get(channel, '100113')},
@@ -127,19 +53,20 @@ def test_tencent():
             item_list = data.get('data', {}).get('itemList', []) or []
             if item_list:
                 print(f"  ✅ 腾讯{cat_name}(热搜榜): 共 {len(item_list)} 条")
-                for i, item in enumerate(item_list[:3]):
+                for i, item in enumerate(item_list[:5]):
                     title = item.get('title', '')
                     heat = item.get('heatScore', 0)
                     poster = item.get('picUrl', '')
                     print(f"     [{i+1}] {title} | 热度={heat} | 封面={'✅' if poster else '❌'}")
+                    results.append({'title': title, 'heat': heat})
                 continue
             else:
                 print(f"      热搜榜无数据")
         except Exception as e:
             print(f"      热搜榜失败: {e}")
 
-        # 方式3: pbaccess
-        print(f"  [3] 测试 pbaccess API ...")
+        # 方式2: pbaccess getPage
+        print(f"  [2] 测试 pbaccess getPage API ...")
         try:
             body = {
                 'page_context': {'page_index': '0'},
@@ -168,7 +95,23 @@ def test_tencent():
         except Exception as e:
             print(f"      pbaccess失败: {e}")
 
-        print(f"  ❌ 腾讯{cat_name}: 所有接口均无数据")
+        # 方式3: HTML列表
+        print(f"  [3] 测试 HTML列表页 ...")
+        try:
+            resp = session.get('https://v.qq.com/x/bu/pagesheet/list', params={
+                '_all': '1', 'append': '1', 'channel': channel,
+                'listpage': '2', 'offset': '0', 'pagesize': '30', 'sort': '75'
+            }, headers={'Referer': 'https://v.qq.com/channel/tv'}, timeout=15)
+            titles = re.findall(r'title="([^"]{2,30})"', resp.text)
+            titles = list(dict.fromkeys(titles))  # dedupe preserving order
+            if titles:
+                print(f"  ✅ 腾讯{cat_name}(HTML): 共 {len(titles)} 条")
+                for i, t in enumerate(titles[:5]):
+                    print(f"     [{i+1}] {t}")
+            else:
+                print(f"      HTML无数据")
+        except Exception as e:
+            print(f"      HTML失败: {e}")
 
     return results
 
@@ -183,7 +126,7 @@ def test_iqiyi():
     for cid, cat_name in [('2', '电视剧'), ('6', '综艺')]:
         print(f"\n  --- {cat_name} ---")
 
-        # 主API
+        # 主API: 风云榜
         print(f"  [1] 测试风云榜API ...")
         try:
             resp = session.get(
@@ -194,7 +137,7 @@ def test_iqiyi():
             rank_list = data.get('data', {}).get('list', [])
             if rank_list:
                 print(f"  ✅ 爱奇艺{cat_name}(风云榜): 共 {len(rank_list)} 条")
-                for i, item in enumerate(rank_list[:3]):
+                for i, item in enumerate(rank_list[:5]):
                     title = item.get('name', '')
                     heat = item.get('hot', 0)
                     poster = item.get('imageUrl', '')
@@ -206,7 +149,7 @@ def test_iqiyi():
         except Exception as e:
             print(f"      风云榜失败: {e}")
 
-        # 备用API
+        # 备用API: PCW
         print(f"  [2] 测试PCW备用API ...")
         try:
             resp = session.get(
@@ -218,12 +161,12 @@ def test_iqiyi():
             items = data.get('data', {}).get('list', [])
             if items:
                 print(f"  ✅ 爱奇艺{cat_name}(PCW): 共 {len(items)} 条")
-                for i, item in enumerate(items[:3]):
+                for i, item in enumerate(items[:5]):
                     title = item.get('title', '')
                     heat = item.get('hot', 0) or item.get('play_count', 0)
                     poster = item.get('imageUrl', '') or item.get('img', '')
                     desc = item.get('focus', '') or item.get('description', '')
-                    print(f"     [{i+1}] {title} | hot={heat} | 封面={'✅' if poster else '❌'} | {desc[:20]}")
+                    print(f"     [{i+1}] {title} | hot={heat} | 封面={'✅' if poster else '❌'} | {desc[:30]}")
                 continue
         except Exception as e:
             print(f"      PCW失败: {e}")
@@ -265,12 +208,11 @@ def test_mgtv():
                     img = item.get('img', '')
                     update = item.get('updateInfo', '')
 
-                    # 判断完结
                     is_fin = ('全' in update and '集' in update) or '完结' in update
 
                     heat = playcnt or allcnt or views or 0
                     status = '完结' if is_fin else '在播'
-                    print(f"     [{i+1}] {title} | playcnt={playcnt} allcnt={allcnt} | 封面={'✅' if img else '❌'} | {update} | {status}")
+                    print(f"     [{i+1}] {title} | playcnt={playcnt} allcnt={allcnt} views={views} | 封面={'✅' if img else '❌'} | {update} | {status}")
                     results.append({'title': title, 'heat': heat})
             else:
                 print(f"  ❌ 芒果TV{cat_name}: 无数据")
@@ -311,11 +253,12 @@ def test_youku():
             show_list = result.get('data', {}).get('nodes', []) or result.get('nodes', []) or result.get('list', []) or []
             if show_list:
                 print(f"  ✅ 优酷{cat_name}(API): 共 {len(show_list)} 条")
-                for i, item in enumerate(show_list[:3]):
+                for i, item in enumerate(show_list[:5]):
                     title = item.get('title', '') or item.get('show_name', '')
                     heat = item.get('heat', 0)
                     img = item.get('img', '')
                     print(f"     [{i+1}] {title} | 热度={heat} | 封面={'✅' if img else '❌'}")
+                    results.append({'title': title, 'heat': heat})
                 continue
             else:
                 print(f"      API无数据")
@@ -328,7 +271,6 @@ def test_youku():
             resp = session.get(f'https://list.youku.com/category/show/c_{cid}/s_1_d_1.html',
                                headers={'Referer': 'https://www.youku.com/'}, timeout=15)
             if resp.status_code == 200:
-                # 简单统计是否有内容
                 title_count = len(re.findall(r'title="([^"]+)"', resp.text))
                 print(f"      HTML页面: 找到 {title_count} 个title属性")
                 if title_count > 5:
@@ -348,7 +290,7 @@ def test_youku():
 def run_full_crawl():
     """运行完整采集流程（写入数据库）"""
     print("\n" + "=" * 60)
-    print("🚀 运行完整采集流程（写入数据库，仅保存在播剧）")
+    print("运行完整采集流程（写入数据库，仅保存在播剧）")
     print("=" * 60)
 
     try:
@@ -357,7 +299,6 @@ def run_full_crawl():
 
         with app.app_context():
             from crawlers.base_crawler import BaseCrawler
-            from crawlers.bilibili_crawler import BilibiliCrawler
             from crawlers.iqiyi_crawler import IqiyiCrawler
             from crawlers.tencent_crawler import TencentCrawler
             from crawlers.youku_crawler import YoukuCrawler
@@ -366,7 +307,6 @@ def run_full_crawl():
             BaseCrawler.clear_drama_cache()
 
             crawlers = [
-                BilibiliCrawler(),
                 IqiyiCrawler(),
                 TencentCrawler(),
                 YoukuCrawler(),
@@ -381,32 +321,32 @@ def run_full_crawl():
                     total += count
                     print(f"\n  {crawler.platform_name}: 采集 {count} 条")
                 except Exception as e:
-                    print(f"\n  ❌ {crawler.platform_name}: {e}")
+                    print(f"\n  {crawler.platform_name}: {e}")
 
             print(f"\n{'=' * 60}")
-            print(f"✅ 采集完成！共处理 {total} 条数据")
+            print(f"采集完成！共处理 {total} 条数据")
             print(f"（仅在播剧被写入热度表，已完结剧自动跳过）")
             print(f"{'=' * 60}")
 
     except Exception as e:
-        print(f"\n❌ 采集失败: {e}")
+        print(f"\n采集失败: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == '__main__':
-    print("剧云榜 — 爬虫API测试工具 v2")
+    print("剧云榜 — 爬虫API测试工具 v3")
+    print(f"平台: 爱奇艺 / 腾讯视频 / 优酷 / 芒果TV")
     print(f"Python {sys.version}")
 
     if '--save' in sys.argv:
         run_full_crawl()
     else:
-        print("\n📡 测试模式：只检测API可用性，不写入数据库")
-        print("   添加 --save 参数可执行完整采集（仅在播剧写入）\n")
+        print("\n测试模式：只检测API可用性，不写入数据库")
+        print("添加 --save 参数可执行完整采集（仅在播剧写入）\n")
 
-        test_bilibili()
-        test_tencent()
         test_iqiyi()
+        test_tencent()
         test_mgtv()
         test_youku()
 

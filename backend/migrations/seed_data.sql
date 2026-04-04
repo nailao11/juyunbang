@@ -8,16 +8,16 @@ SET NAMES utf8mb4;
 -- ============================================================
 -- 1. 平台数据（schema.sql 已包含，这里用 INSERT IGNORE 补充）
 -- ============================================================
-INSERT IGNORE INTO platforms (name, short_name, color, sort_order) VALUES
-('爱奇艺', 'iqiyi', '#00BE06', 1),
-('优酷', 'youku', '#1EBCF2', 2),
-('腾讯视频', 'tencent', '#FF6600', 3),
-('芒果TV', 'mgtv', '#FF5F00', 4),
-('哔哩哔哩', 'bilibili', '#FB7299', 5),
-('搜狐视频', 'sohu', '#F04E23', 6),
-('抖音', 'douyin', '#000000', 7),
-('微博', 'weibo', '#E6162D', 8),
-('百度', 'baidu', '#2932E1', 9);
+INSERT IGNORE INTO platforms (name, short_name, color, sort_order, is_active) VALUES
+('爱奇艺', 'iqiyi', '#00BE06', 1, 1),
+('优酷', 'youku', '#1EBCF2', 2, 1),
+('腾讯视频', 'tencent', '#FF6600', 3, 1),
+('芒果TV', 'mgtv', '#FF5F00', 4, 1),
+('哔哩哔哩', 'bilibili', '#FB7299', 5, 0),
+('搜狐视频', 'sohu', '#F04E23', 6, 0),
+('抖音', 'douyin', '#000000', 7, 0),
+('微博', 'weibo', '#E6162D', 8, 0),
+('百度', 'baidu', '#2932E1', 9, 0);
 
 -- ============================================================
 -- 2. 热门剧集数据（30+部真实中国电视剧/综艺）

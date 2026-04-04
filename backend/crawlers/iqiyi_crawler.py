@@ -135,8 +135,9 @@ class IqiyiCrawler(BaseCrawler):
                 title = item.get('title', item.get('name', ''))
                 # 尝试获取热度值; 如果没有，按排名递减估算
                 heat = item.get('hot', 0) or item.get('play_count', 0) or item.get('score', 0)
+                # PCW备用API通常不返回热度值，用排名位置估算站内热度
                 if not heat:
-                    heat = max(1000, 9800 - i * 300)
+                    heat = max(2000, 9800 - i * 250)
 
                 poster = item.get('imageUrl', '') or item.get('img', '') or item.get('pic', '') or ''
 

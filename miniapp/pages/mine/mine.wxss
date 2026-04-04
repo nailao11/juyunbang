@@ -85,55 +85,31 @@
   margin-top: 8rpx;
 }
 
-/* 追剧统计 */
+/* 数据概览 */
 .stats-row {
   position: relative;
   display: flex;
   justify-content: space-around;
-  padding: 24rpx 60rpx 0;
+  padding: 24rpx 40rpx 0;
 }
 
-.stat-item {
+.stat-item-simple {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1;
 }
 
-.stat-circle {
-  width: 120rpx;
-  height: 120rpx;
-  margin-bottom: 12rpx;
-}
-
-.circle-progress {
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.circle-inner {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stat-num {
+.stat-num-simple {
   font-size: 36rpx;
   font-weight: 700;
   color: #fff;
+  margin-bottom: 6rpx;
 }
 
-.stat-label {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.8);
+.stat-label-simple {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* 菜单卡片 */

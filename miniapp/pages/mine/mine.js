@@ -6,13 +6,9 @@ Page({
   data: {
     userInfo: {},
     stats: {
-      watching: 0,
-      want: 0,
-      watched: 0
+      dramaCount: '-',
+      platformCount: 4
     },
-    watchingPercent: 0,
-    wantPercent: 0,
-    watchedPercent: 0,
     darkMode: false
   },
 
@@ -23,7 +19,7 @@ Page({
   onShow() {
     this.checkDarkMode()
     this.loadUserInfo()
-    this.loadTrackingStats()
+    this.loadStats()
   },
 
   checkDarkMode() {
@@ -50,22 +46,16 @@ Page({
     }
   },
 
-  // 加载追剧统计
-  async loadTrackingStats() {
+  // 加载数据概览
+  async loadStats() {
     try {
-      const data = await api.get('/tracking/stats', {}, true)
-      const stats = data || { watching: 0, want: 0, watched: 0 }
-      const total = stats.watching + stats.want + stats.watched
-      const max = Math.max(total, 1)
-
+      const data = await api.get('/system/stats')
       this.setData({
-        stats,
-        watchingPercent: Math.round((stats.watching / max) * 100),
-        wantPercent: Math.round((stats.want / max) * 100),
-        watchedPercent: Math.round((stats.watched / max) * 100)
+        'stats.dramaCount': (data && data.drama_count) || '-',
+        'stats.platformCount': (data && data.platform_count) || 4
       })
     } catch (e) {
-      console.error('加载追剧统计失败', e)
+      console.error('加载数据概览失败', e)
     }
   },
 

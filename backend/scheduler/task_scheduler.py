@@ -28,17 +28,16 @@ def job_crawl_heat():
     logger.info("=== 开始热度数据采集任务 ===")
     try:
         from crawlers.base_crawler import BaseCrawler
-        from crawlers.bilibili_crawler import BilibiliCrawler
         from crawlers.iqiyi_crawler import IqiyiCrawler
-        from crawlers.youku_crawler import YoukuCrawler
         from crawlers.tencent_crawler import TencentCrawler
+        from crawlers.youku_crawler import YoukuCrawler
         from crawlers.mgtv_crawler import MgtvCrawler
 
         # 每轮采集前清除缓存，确保新剧能被匹配到
         BaseCrawler.clear_drama_cache()
 
+        # 四大主流平台：爱奇艺、腾讯视频、优酷、芒果TV
         crawlers = [
-            BilibiliCrawler(),   # 最稳定，优先执行
             IqiyiCrawler(),
             TencentCrawler(),
             YoukuCrawler(),

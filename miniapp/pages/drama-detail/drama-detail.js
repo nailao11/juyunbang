@@ -15,7 +15,6 @@ Page({
     playData: {},
     socialData: [],
     relatedList: [],
-    trackingStatus: '',
     showFullSynopsis: false,
     scrolled: false,
     darkMode: false,
@@ -33,7 +32,6 @@ Page({
     if (options.id) {
       this.loadDramaDetail(options.id)
       this.loadRelated(options.id)
-      this.loadTrackingStatus(options.id)
     }
   },
 
@@ -182,52 +180,9 @@ Page({
     }
   },
 
-  // 加载追剧状态
-  async loadTrackingStatus(id) {
-    try {
-      const data = await api.get(`/tracking/status/${id}`, {}, true)
-      this.setData({ trackingStatus: data.status || '' })
-    } catch (e) {
-      // 未登录或未追
-    }
-  },
-
-  // 追剧/想看
-  async toggleTracking(e) {
-    const status = e.currentTarget.dataset.status
-    const current = this.data.trackingStatus
-
-    try {
-      if (current === status) {
-        // 取消
-        await api.del(`/tracking/${this.data.dramaId}`)
-        this.setData({ trackingStatus: '' })
-        wx.showToast({ title: '已取消', icon: 'success' })
-      } else {
-        // 添加/更新
-        await api.post('/tracking/add', {
-          drama_id: this.data.dramaId,
-          status: status
-        })
-        this.setData({ trackingStatus: status })
-        const label = status === 'watching' ? '已加入追剧' : '已加入想看'
-        wx.showToast({ title: label, icon: 'success' })
-      }
-    } catch (e) {
-      wx.showToast({ title: '请先登录', icon: 'none' })
-    }
-  },
-
   // 展开/收起简介
   toggleSynopsis() {
     this.setData({ showFullSynopsis: !this.data.showFullSynopsis })
-  },
-
-  // 去写笔记
-  goNotes() {
-    wx.navigateTo({
-      url: `/pages/notes/notes?drama_id=${this.data.dramaId}&title=${this.data.drama.title || ''}`
-    })
   },
 
   // 返回

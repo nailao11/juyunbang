@@ -7,9 +7,7 @@ const DRAMA_TYPES = [
   { value: '', label: '全部' },
   { value: 'tv_drama', label: '电视剧' },
   { value: 'web_drama', label: '网剧' },
-  { value: 'variety', label: '综艺' },
-  { value: 'anime', label: '动漫' },
-  { value: 'documentary', label: '纪录片' }
+  { value: 'variety', label: '综艺' }
 ]
 
 // 地区
@@ -35,12 +33,7 @@ const PLATFORM_COLORS = {
   'iqiyi': '#00BE06',
   'youku': '#1EBCF2',
   'tencent': '#FF6600',
-  'mgtv': '#FF5F00',
-  'bilibili': '#FB7299',
-  'sohu': '#F04E23',
-  'douyin': '#000000',
-  'weibo': '#E6162D',
-  'baidu': '#2932E1'
+  'mgtv': '#FF5F00'
 }
 
 module.exports = {

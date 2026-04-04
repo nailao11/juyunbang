@@ -1,5 +1,7 @@
 import json
 import re
+import time
+import random
 from loguru import logger
 
 from .base_crawler import BaseCrawler
@@ -7,11 +9,8 @@ from .base_crawler import BaseCrawler
 
 class TencentCrawler(BaseCrawler):
     """
-    腾讯视频热度采集器 — 使用多种公开接口
-    策略：
-      1. 腾讯视频热播榜 Web API（bu/pagesheet/list）
-      2. 腾讯视频搜索热词接口
-      3. 腾讯视频 pbaccess API
+    腾讯视频热度采集器
+    策略: pbaccess API → HTML列表解析
     """
 
     PLATFORM_ID = 3
@@ -25,19 +24,15 @@ class TencentCrawler(BaseCrawler):
         saved_count = 0
 
         try:
-            tv_data = self._crawl_rank('tv')
-            results.extend(tv_data)
-
-            variety_data = self._crawl_rank('variety')
-            results.extend(variety_data)
+            for category in ['tv', 'variety']:
+                data = self._crawl_rank(category)
+                results.extend(data)
 
             type_map = {'tv': 'tv_drama', 'variety': 'variety'}
-
             for item in results:
                 dtype = type_map.get(item.get('category'), 'tv_drama')
                 drama_id = self._match_drama(
-                    item['title'],
-                    drama_type=dtype,
+                    item['title'], drama_type=dtype,
                     poster_url=item.get('poster_url', ''),
                     is_finished=item.get('is_finished', False),
                 )
@@ -63,162 +58,21 @@ class TencentCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='tv'):
-        """多接口策略"""
-        # 方式1: 腾讯视频热播榜 Web API (最稳定的公开接口)
-        items = self._fetch_from_web_list(category)
-        if items:
-            return items
-
-        # 方式2: 腾讯视频热搜/热播接口
-        logger.warning(f"[腾讯视频] Web列表接口无数据，尝试热播接口 {category}")
-        items = self._fetch_from_hot_rank(category)
-        if items:
-            return items
-
-        # 方式3: pbaccess API
-        logger.warning(f"[腾讯视频] 热播接口无数据，尝试pbaccess {category}")
+        # 方式1: pbaccess API (已确认服务器上可返回数据)
         items = self._fetch_from_pbaccess(category)
-        return items
+        if items:
+            return items
 
-    def _fetch_from_web_list(self, category):
-        """
-        腾讯视频频道列表 API — GET 请求，返回 JSON
-        https://v.qq.com/x/bu/pagesheet/list 是腾讯视频公开的频道列表接口
-        sort=75 表示按热度排序
-        """
-        channel_map = {'tv': 'tv', 'variety': 'variety'}
-        channel = channel_map.get(category, 'tv')
-
-        url = 'https://v.qq.com/x/bu/pagesheet/list'
-        params = {
-            '_all': '1',
-            'append': '1',
-            'channel': channel,
-            'listpage': '2',
-            'offset': '0',
-            'pagesize': '30',
-            'sort': '75',  # 按热度排序
-        }
-
-        headers = {
-            'Referer': 'https://v.qq.com/channel/tv',
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-        }
-
-        resp = self.fetch(url, params=params, headers=headers)
-        if not resp:
-            return []
-
-        items = []
-        try:
-            # 尝试JSON解析
-            try:
-                data = resp.json()
-                item_list = data.get('list', []) or data.get('data', {}).get('list', []) or []
-            except Exception:
-                # 如果不是JSON，尝试从HTML中提取JSON数据
-                text = resp.text
-                item_list = self._extract_from_html(text)
-
-            for i, show in enumerate(item_list[:30]):
-                if isinstance(show, dict):
-                    title = show.get('title', '') or show.get('typeName', '')
-                    heat = show.get('hotVal', 0) or show.get('epsodeCount', 0) or 0
-                    poster = show.get('pic160x90', '') or show.get('pic', '') or show.get('horizontalPic', '') or ''
-                    # 判断是否完结
-                    type_name = show.get('typeName', '') or show.get('markLabel', '') or ''
-                    episode_info = show.get('episode_updated', '') or show.get('latest_updateDesc', '')
-                    is_finished = '完结' in type_name or '完结' in str(episode_info)
-
-                    if title:
-                        try:
-                            heat_value = float(str(heat).replace(',', '').replace('万', '0000'))
-                        except (ValueError, TypeError):
-                            heat_value = max(0, 10000 - i * 300)
-
-                        items.append({
-                            'title': self._normalize_title(title),
-                            'heat_value': heat_value if heat_value > 0 else max(0, 10000 - i * 300),
-                            'poster_url': poster,
-                            'rank': i + 1,
-                            'category': category,
-                            'is_finished': is_finished,
-                            'platform': 'tencent'
-                        })
-
-        except Exception as e:
-            logger.error(f"[腾讯视频] Web列表解析失败: {e}")
-
-        return items
-
-    def _extract_from_html(self, html_text):
-        """从HTML中提取剧集数据"""
-        items = []
-        try:
-            # 尝试找JSON数据块
-            match = re.search(r'var\s+LIST_DATA\s*=\s*(\{.*?\});', html_text, re.DOTALL)
-            if match:
-                data = json.loads(match.group(1))
-                return data.get('list', [])
-
-            match = re.search(r'"list"\s*:\s*(\[.*?\])', html_text, re.DOTALL)
-            if match:
-                return json.loads(match.group(1))
-        except Exception:
-            pass
-        return items
-
-    def _fetch_from_hot_rank(self, category):
-        """腾讯视频站内热搜榜"""
-        url = 'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp'
-        headers = {
-            'Content-Type': 'application/json',
-            'Referer': 'https://v.qq.com/',
-            'Origin': 'https://v.qq.com',
-        }
-
-        channel_map = {'tv': '100113', 'variety': '100109'}
-        body = {
-            'pageNum': 0,
-            'pageSize': 30,
-            'channelId': channel_map.get(category, '100113'),
-        }
-
-        try:
-            resp = self.session.post(url, json=body, headers=headers, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as e:
-            logger.warning(f"[腾讯视频] 热搜榜接口失败: {e}")
-            return []
-
-        items = []
-        try:
-            item_list = data.get('data', {}).get('itemList', []) or []
-            for i, show in enumerate(item_list[:30]):
-                title = show.get('title', '')
-                heat = show.get('heatScore', 0) or show.get('hotValue', 0)
-                poster = show.get('picUrl', '') or show.get('imgUrl', '') or ''
-
-                if title:
-                    items.append({
-                        'title': self._normalize_title(title),
-                        'heat_value': float(heat) if heat else max(0, 10000 - i * 300),
-                        'poster_url': poster,
-                        'rank': i + 1,
-                        'category': category,
-                        'is_finished': False,
-                        'platform': 'tencent'
-                    })
-        except Exception as e:
-            logger.error(f"[腾讯视频] 热搜榜解析失败: {e}")
-
+        # 方式2: bu/pagesheet/list HTML解析
+        logger.warning(f"[腾讯视频] pbaccess无数据，尝试HTML列表 {category}")
+        items = self._fetch_from_html_list(category)
         return items
 
     def _fetch_from_pbaccess(self, category):
-        """pbaccess内部API（备用）"""
-        import time, random
-
+        """
+        pbaccess API — 深度遍历所有可能的数据路径来提取标题和热度。
+        已确认服务器上此接口有CardList=2, children=103。
+        """
         channel_map = {'tv': '100113', 'variety': '100109'}
         channel_id = channel_map.get(category, '100113')
 
@@ -254,41 +108,165 @@ class TencentCrawler(BaseCrawler):
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
-            logger.error(f"[腾讯视频] pbaccess失败: {e}")
+            logger.error(f"[腾讯视频] pbaccess请求失败: {e}")
             return []
 
         items = []
         try:
-            card_list = data.get('data', {}).get('CardList', []) or data.get('data', {}).get('card_list', []) or []
+            card_list = (
+                data.get('data', {}).get('CardList', []) or
+                data.get('data', {}).get('card_list', []) or []
+            )
+
             for card in card_list:
-                children = (
-                    card.get('children_list', {}).get('list', {}).get('cards', []) or
-                    card.get('card', {}).get('card_data', {}).get('cards', []) or []
-                )
+                # 尝试多种children路径
+                children = self._extract_children(card)
+                if not children:
+                    continue
+
                 for i, child in enumerate(children[:30]):
-                    params = child.get('params', {})
-                    title = params.get('title', '') or params.get('show_title', '')
-                    heat = params.get('hot_value', 0) or params.get('score', 0)
-                    poster = params.get('new_pic_hz', '') or params.get('image_url', '') or params.get('pic', '')
+                    parsed = self._parse_child_item(child, i, category)
+                    if parsed:
+                        items.append(parsed)
 
-                    if title:
-                        try:
-                            heat_value = float(str(heat).replace(',', '').replace('万', '0000'))
-                        except (ValueError, TypeError):
-                            heat_value = 0
-
-                        items.append({
-                            'title': self._normalize_title(title),
-                            'heat_value': heat_value,
-                            'poster_url': poster,
-                            'rank': i + 1,
-                            'category': category,
-                            'is_finished': False,
-                            'platform': 'tencent'
-                        })
                 if items:
-                    break
+                    break  # 找到数据就停止遍历cards
+
         except Exception as e:
             logger.error(f"[腾讯视频] pbaccess解析失败: {e}")
+
+        if items:
+            logger.info(f"[腾讯视频] pbaccess成功提取{len(items)}条{category}数据")
+
+        return items
+
+    def _extract_children(self, card):
+        """从card中提取children列表，尝试所有可能路径"""
+        paths = [
+            lambda c: c.get('children_list', {}).get('list', {}).get('cards', []),
+            lambda c: c.get('card', {}).get('card_data', {}).get('cards', []),
+            lambda c: c.get('children_list', {}).get('list', {}).get('items', []),
+            lambda c: c.get('card_data', {}).get('cards', []),
+            lambda c: c.get('children', []),
+            lambda c: c.get('items', []),
+        ]
+        for path_fn in paths:
+            try:
+                result = path_fn(card)
+                if result and len(result) > 0:
+                    return result
+            except Exception:
+                continue
+        return []
+
+    def _parse_child_item(self, child, index, category):
+        """
+        从child对象中提取标题、热度、封面。
+        腾讯视频API返回结构不固定，需要尝试多种字段名。
+        """
+        # 标题: 尝试params中的各种字段，以及顶层字段
+        params = child.get('params', {}) or {}
+        title = ''
+        for key in ['title', 'show_title', 'uni_title', 'second_title', 'reportTitle']:
+            title = params.get(key, '') or ''
+            if title:
+                break
+        if not title:
+            for key in ['title', 'name', 'show_title']:
+                title = child.get(key, '') or ''
+                if title:
+                    break
+        if not title:
+            return None
+
+        # 热度值
+        heat = 0
+        for key in ['hot_value', 'hotval', 'score', 'hot_score', 'ckc_count',
+                     'view_count', 'play_count', 'episode_count_text']:
+            val = params.get(key, 0) or child.get(key, 0)
+            if val:
+                try:
+                    heat = float(str(val).replace(',', '').replace('万', '0000').replace('亿', '00000000'))
+                    if heat > 0:
+                        break
+                except (ValueError, TypeError):
+                    continue
+        if heat == 0:
+            heat = max(1000, 10000 - index * 300)
+
+        # 封面
+        poster = ''
+        for key in ['new_pic_hz', 'image_url', 'pic', 'pic_160x90', 'pic_hz',
+                     'pic_496x280', 'cover_url', 'horizontal_pic_url']:
+            poster = params.get(key, '') or child.get(key, '') or ''
+            if poster:
+                break
+
+        # 判断完结
+        is_finished = False
+        for key in ['episode_updated', 'latest_updateDesc', 'second_title', 'markLabel']:
+            val = str(params.get(key, '') or child.get(key, '') or '')
+            if '完结' in val or ('全' in val and '集' in val):
+                is_finished = True
+                break
+
+        return {
+            'title': self._normalize_title(title),
+            'heat_value': heat,
+            'poster_url': poster,
+            'rank': index + 1,
+            'category': category,
+            'is_finished': is_finished,
+            'platform': 'tencent'
+        }
+
+    def _fetch_from_html_list(self, category):
+        """从腾讯视频频道列表HTML中提取数据"""
+        channel_map = {'tv': 'tv', 'variety': 'variety'}
+        channel = channel_map.get(category, 'tv')
+
+        url = 'https://v.qq.com/x/bu/pagesheet/list'
+        params = {
+            '_all': '1', 'append': '1', 'channel': channel,
+            'listpage': '2', 'offset': '0', 'pagesize': '30', 'sort': '75',
+        }
+
+        resp = self.fetch(url, params=params, headers={
+            'Referer': 'https://v.qq.com/channel/tv',
+        })
+        if not resp:
+            return []
+
+        items = []
+        try:
+            text = resp.text
+            # 从HTML中提取 title 属性
+            matches = re.findall(
+                r'<a[^>]*href="(https://v\.qq\.com/x/cover/[^"]*)"[^>]*title="([^"]*)"',
+                text
+            )
+            for i, (url_str, title) in enumerate(matches[:30]):
+                if title:
+                    items.append({
+                        'title': self._normalize_title(title),
+                        'heat_value': max(1000, 10000 - i * 300),
+                        'poster_url': '',
+                        'rank': i + 1,
+                        'category': category,
+                        'is_finished': False,
+                        'platform': 'tencent'
+                    })
+
+            # 补充封面图
+            img_matches = re.findall(r'src="(https://[^"]*vcover[^"]*)"', text)
+            for i, img_url in enumerate(img_matches):
+                if i < len(items):
+                    items[i]['poster_url'] = img_url
+
+        except Exception as e:
+            logger.error(f"[腾讯视频] HTML解析失败: {e}")
+
+        if items:
+            logger.info(f"[腾讯视频] HTML列表提取{len(items)}条{category}数据")
 
         return items

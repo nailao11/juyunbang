@@ -57,18 +57,21 @@
     </view>
   </view>
 
-  <!-- 操作按钮 -->
+  <!-- 热度快览 -->
   <view class="action-bar card" style="margin: -20rpx 24rpx 20rpx;">
-    <view class="action-btn {{trackingStatus === 'watching' ? 'active' : ''}}"
-          bindtap="toggleTracking" data-status="watching">
-      <image class="action-icon" src="/images/icons/tracking.png" mode="aspectFit"></image>
-      <text class="action-text">{{trackingStatus === 'watching' ? '在追' : '追剧'}}</text>
+    <view class="quick-stat">
+      <text class="quick-stat-value">{{drama.status === 'airing' ? '热播中' : (drama.status === 'finished' ? '已完结' : '待播出')}}</text>
+      <text class="quick-stat-label">播出状态</text>
     </view>
     <view class="action-divider"></view>
-    <view class="action-btn {{trackingStatus === 'want_to_watch' ? 'active' : ''}}"
-          bindtap="toggleTracking" data-status="want_to_watch">
-      <image class="action-icon" src="/images/icons/want.png" mode="aspectFit"></image>
-      <text class="action-text">{{trackingStatus === 'want_to_watch' ? '已想看' : '想看'}}</text>
+    <view class="quick-stat">
+      <text class="quick-stat-value">{{drama.current_episode || '-'}} / {{drama.total_episodes || '-'}}</text>
+      <text class="quick-stat-label">更新进度</text>
+    </view>
+    <view class="action-divider"></view>
+    <view class="quick-stat">
+      <text class="quick-stat-value">{{heatData.current || '-'}}</text>
+      <text class="quick-stat-label">当前热度</text>
     </view>
   </view>
 

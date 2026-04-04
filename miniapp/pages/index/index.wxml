@@ -47,8 +47,6 @@
           bindtap="switchType" data-type="web_drama">网剧</view>
     <view class="type-tab {{currentType === 'variety' ? 'active' : ''}}"
           bindtap="switchType" data-type="variety">综艺</view>
-    <view class="type-tab {{currentType === 'anime' ? 'active' : ''}}"
-          bindtap="switchType" data-type="anime">动漫</view>
   </view>
 
   <!-- 热度排行列表 -->
