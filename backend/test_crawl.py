@@ -29,6 +29,98 @@ def create_session():
     return s
 
 
+def test_dailyhot():
+    """测试 DailyHot 统一API（推荐方案）"""
+    print("\n" + "=" * 60)
+    print("【DailyHot统一API】测试（推荐方案）")
+    print("=" * 60)
+
+    session = create_session()
+    import os
+    base_url = os.environ.get('DAILYHOT_API', 'https://api-hot.imsyy.top')
+    print(f"  API地址: {base_url}")
+    print(f"  （可通过环境变量 DAILYHOT_API 修改，如自建实例）\n")
+
+    platforms = {
+        'iqiyi': '爱奇艺',
+        'tencent': '腾讯视频',
+        'youku': '优酷',
+        'mgtv': '芒果TV',
+    }
+
+    total_with_heat = 0
+    for route, name in platforms.items():
+        print(f"  --- {name} ({route}) ---")
+        try:
+            resp = session.get(f'{base_url}/{route}', timeout=15)
+            print(f"  HTTP {resp.status_code}, 长度={len(resp.text)}")
+
+            if resp.status_code != 200:
+                print(f"  !! 请求失败\n")
+                continue
+
+            data = resp.json()
+            print(f"  响应key: {list(data.keys())}")
+
+            items = data.get('data', [])
+            if not items:
+                for k, v in data.items():
+                    if isinstance(v, list) and len(v) >= 3:
+                        items = v
+                        break
+
+            if not items:
+                print(f"  !! 无数据列表\n")
+                continue
+
+            # 显示第一条的完整字段
+            if items and isinstance(items[0], dict):
+                print(f"  数据量: {len(items)}条")
+                print(f"  字段: {list(items[0].keys())}")
+
+            has_heat = 0
+            for i, item in enumerate(items[:5]):
+                if not isinstance(item, dict):
+                    continue
+                title = item.get('title', '') or item.get('name', '')
+                hot = item.get('hot', '') or item.get('heat', '') or item.get('score', '')
+                cover = item.get('cover', '') or item.get('pic', '') or item.get('img', '')
+                url_link = item.get('url', '')
+
+                # 解析热度值
+                heat_val = 0
+                if hot:
+                    s = str(hot).strip().replace(',', '')
+                    try:
+                        if s.endswith('万'):
+                            heat_val = float(s[:-1]) * 10000
+                        elif s.endswith('亿'):
+                            heat_val = float(s[:-1]) * 100000000
+                        else:
+                            heat_val = float(s)
+                    except (ValueError, TypeError):
+                        pass
+
+                if heat_val > 0:
+                    has_heat += 1
+
+                print(f"  [{i+1}] {title} | 热度={hot} (={heat_val}) | 封面={'有' if cover else '无'}")
+
+            total_with_heat += has_heat
+            print(f"  >> {has_heat}/{min(len(items), 5)}条有热度值\n")
+
+        except Exception as e:
+            print(f"  !! 失败: {e}\n")
+
+    print(f"\n  === DailyHot总计: {total_with_heat}条有热度 ===")
+    if total_with_heat > 0:
+        print(f"  ✓ DailyHot API可用！建议作为主要数据源")
+    else:
+        print(f"  ✗ DailyHot API不可用，请检查网络或自建实例")
+        print(f"    自建方法: docker run -d -p 6688:6688 imsyy/dailyhot-api")
+        print(f"    然后设置: export DAILYHOT_API=http://localhost:6688")
+
+
 def test_tencent():
     print("\n" + "=" * 60)
     print("【腾讯视频】测试")
@@ -477,12 +569,34 @@ def run_full_crawl():
 
         with app.app_context():
             from crawlers.base_crawler import BaseCrawler
+            BaseCrawler.clear_drama_cache()
+
+            total = 0
+
+            # 优先使用DailyHot统一API
+            print("\n--- 尝试DailyHot统一API ---")
+            try:
+                from crawlers.dailyhot_crawler import DailyHotCrawler
+                crawler = DailyHotCrawler()
+                saved = crawler.crawl()
+                total += saved if isinstance(saved, int) else 0
+                if total > 0:
+                    print(f"\n  DailyHot: 保存 {total} 条热度数据")
+                    print(f"\n{'=' * 60}")
+                    print(f"采集完成！共保存 {total} 条数据")
+                    print(f"{'=' * 60}")
+                    return
+                else:
+                    print(f"\n  DailyHot: 未获取到数据，降级到单平台爬虫")
+            except Exception as e:
+                print(f"\n  DailyHot失败: {e}，降级到单平台爬虫")
+
+            # 降级：逐平台爬虫
+            print("\n--- 降级到单平台爬虫 ---")
             from crawlers.iqiyi_crawler import IqiyiCrawler
             from crawlers.tencent_crawler import TencentCrawler
             from crawlers.youku_crawler import YoukuCrawler
             from crawlers.mgtv_crawler import MgtvCrawler
-
-            BaseCrawler.clear_drama_cache()
 
             crawlers = [
                 IqiyiCrawler(),
@@ -491,7 +605,6 @@ def run_full_crawl():
                 MgtvCrawler(),
             ]
 
-            total = 0
             for crawler in crawlers:
                 try:
                     results = crawler.crawl()
@@ -524,11 +637,18 @@ if __name__ == '__main__':
         exec(open(os.path.join(os.path.dirname(__file__), 'debug_apis.py')).read())
     elif '--save' in sys.argv:
         run_full_crawl()
+    elif '--dailyhot' in sys.argv:
+        test_dailyhot()
     else:
         print("\n测试模式：检测API可用性，不写入数据库")
-        print("  --save  执行完整采集并写入数据库")
-        print("  --debug 运行深度API调试\n")
+        print("  --dailyhot  测试DailyHot统一API（推荐）")
+        print("  --save      执行完整采集并写入数据库")
+        print("  --debug     运行深度API调试\n")
 
+        # 先测试DailyHot统一API
+        test_dailyhot()
+
+        # 再测试各平台原生API
         test_iqiyi()
         test_tencent()
         test_mgtv()
