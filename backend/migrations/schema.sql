@@ -59,16 +59,19 @@ CREATE TABLE IF NOT EXISTS platforms (
   UNIQUE KEY uk_short_name (short_name)
 ) ENGINE=InnoDB COMMENT='平台表';
 
-INSERT IGNORE INTO platforms (name, short_name, color, sort_order) VALUES
-('爱奇艺', 'iqiyi', '#00BE06', 1),
-('优酷', 'youku', '#1EBCF2', 2),
-('腾讯视频', 'tencent', '#FF6600', 3),
-('芒果TV', 'mgtv', '#FF5F00', 4),
-('哔哩哔哩', 'bilibili', '#FB7299', 5),
-('搜狐视频', 'sohu', '#F04E23', 6),
-('抖音', 'douyin', '#000000', 7),
-('微博', 'weibo', '#E6162D', 8),
-('百度', 'baidu', '#2932E1', 9);
+INSERT IGNORE INTO platforms (name, short_name, color, sort_order, is_active) VALUES
+('爱奇艺', 'iqiyi', '#00BE06', 1, 1),
+('优酷', 'youku', '#1EBCF2', 2, 1),
+('腾讯视频', 'tencent', '#FF6600', 3, 1),
+('芒果TV', 'mgtv', '#FF5F00', 4, 1),
+('哔哩哔哩', 'bilibili', '#FB7299', 5, 0),
+('搜狐视频', 'sohu', '#F04E23', 6, 0),
+('抖音', 'douyin', '#000000', 7, 0),
+('微博', 'weibo', '#E6162D', 8, 0),
+('百度', 'baidu', '#2932E1', 9, 0);
+
+-- 确保已有数据库中也禁用非核心平台
+UPDATE platforms SET is_active = 0 WHERE short_name IN ('bilibili', 'sohu', 'douyin', 'weibo', 'baidu');
 
 -- 表3：剧集-平台关联表
 CREATE TABLE IF NOT EXISTS drama_platforms (

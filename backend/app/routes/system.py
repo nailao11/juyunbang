@@ -11,6 +11,25 @@ from ..utils.qiniu_helper import get_upload_token
 system_bp = Blueprint('system', __name__)
 
 
+@system_bp.route('/stats', methods=['GET'])
+def system_stats():
+    """数据概览统计（用于个人中心展示）"""
+    cache_key = "system:stats"
+    cached = cache_get(cache_key)
+    if cached:
+        return success(cached)
+
+    rows = query("SELECT COUNT(*) as cnt FROM dramas WHERE status = 'airing'")
+    drama_count = rows[0]['cnt'] if rows else 0
+
+    rows2 = query("SELECT COUNT(*) as cnt FROM platforms WHERE is_active = 1")
+    platform_count = rows2[0]['cnt'] if rows2 else 4
+
+    result = {'drama_count': drama_count, 'platform_count': platform_count}
+    cache_set(cache_key, result, expire=300)
+    return success(result)
+
+
 @system_bp.route('/platforms', methods=['GET'])
 def platform_list():
     """获取平台列表"""

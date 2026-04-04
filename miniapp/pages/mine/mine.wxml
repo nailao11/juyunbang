@@ -20,37 +20,19 @@
       </view>
     </view>
 
-    <!-- 追剧统计 -->
+    <!-- 数据概览 -->
     <view class="stats-row">
-      <view class="stat-item">
-        <view class="stat-circle">
-          <view class="circle-progress" style="background: conic-gradient(#667eea {{watchingPercent}}%, var(--border) 0);">
-            <view class="circle-inner">
-              <text class="stat-num">{{stats.watching || 0}}</text>
-            </view>
-          </view>
-        </view>
-        <text class="stat-label">在追</text>
+      <view class="stat-item-simple">
+        <text class="stat-num-simple">{{stats.dramaCount || '-'}}</text>
+        <text class="stat-label-simple">收录剧集</text>
       </view>
-      <view class="stat-item">
-        <view class="stat-circle">
-          <view class="circle-progress" style="background: conic-gradient(#f093fb {{wantPercent}}%, var(--border) 0);">
-            <view class="circle-inner">
-              <text class="stat-num">{{stats.want || 0}}</text>
-            </view>
-          </view>
-        </view>
-        <text class="stat-label">想看</text>
+      <view class="stat-item-simple">
+        <text class="stat-num-simple">{{stats.platformCount || 4}}</text>
+        <text class="stat-label-simple">监控平台</text>
       </view>
-      <view class="stat-item">
-        <view class="stat-circle">
-          <view class="circle-progress" style="background: conic-gradient(#2dce89 {{watchedPercent}}%, var(--border) 0);">
-            <view class="circle-inner">
-              <text class="stat-num">{{stats.watched || 0}}</text>
-            </view>
-          </view>
-        </view>
-        <text class="stat-label">看完</text>
+      <view class="stat-item-simple">
+        <text class="stat-num-simple">15min</text>
+        <text class="stat-label-simple">更新频率</text>
       </view>
     </view>
   </view>
