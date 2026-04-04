@@ -89,10 +89,11 @@ class TencentCrawler(BaseCrawler):
         腾讯视频热搜榜API，返回heatScore字段。
         尝试多个channelId直到找到有数据的。
         """
-        # 不同的channelId对应不同的分类
+        # HotRankHttp的channelId可能与getPage不同
+        # 排行页URL https://v.qq.com/biu/ranks/?t=hotsearch 可能用简单数字ID
         channel_ids = {
-            'tv': ['100173', '100113', '150203', '电视剧'],
-            'variety': ['100109', '100105', '100246', '综艺'],
+            'tv': ['2', '1', '100173', '100113', '150203', '电视剧', 'tv'],
+            'variety': ['5', '3', '100109', '100105', '综艺', 'variety'],
         }
 
         headers = {

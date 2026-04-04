@@ -34,7 +34,7 @@ def debug_tencent(session):
 
     # --- 1. HotRankHttp 热搜榜 ---
     print("\n--- [1] HotRankHttp 热搜榜API ---")
-    for cid in ['100173', '100113', '150203', '电视剧']:
+    for cid in ['2', '1', '3', '5', '0', '100173', '100113', '150203', '电视剧', 'tv']:
         try:
             resp = session.post(
                 'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp',
@@ -429,6 +429,118 @@ def debug_youku(session):
             print(f"  {url}: {e}")
 
 
+def debug_maoyan(session):
+    """
+    猫眼专业版 — 聚合了全部平台的真实热度数据
+    这可能是获取各平台热度值的最佳单一数据源
+    """
+    print("\n" + "=" * 70)
+    print("【猫眼专业版】全平台热度聚合数据")
+    print("=" * 70)
+
+    # --- 1. 网播热度页面 ---
+    print("\n--- [1] 网播热度页面 ---")
+    for url in [
+        'https://piaofang.maoyan.com/web-heat',
+        'https://piaofang.maoyan.com/dashboard/web-heat',
+    ]:
+        try:
+            resp = session.get(url, headers={
+                'Referer': 'https://piaofang.maoyan.com/',
+            }, timeout=15)
+            text = resp.text
+            print(f"\n  {url}: HTTP {resp.status_code}, 长度={len(text)}")
+
+            # 查找嵌入JSON
+            for pat_name, pattern in [
+                ('__INITIAL_DATA__', r'window\.__INITIAL_DATA__\s*=\s*(\{.+?\});\s*</script>'),
+                ('__NEXT_DATA__', r'__NEXT_DATA__[^>]*>\s*(\{.+?\})\s*</script>'),
+                ('__NUXT__', r'window\.__NUXT__\s*=\s*(\{.+?\});\s*</script>'),
+            ]:
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    try:
+                        jd = json.loads(match.group(1))
+                        print(f"  找到{pat_name}! key: {list(jd.keys())[:8]}")
+                        _find_title_lists(jd, prefix=pat_name)
+                    except json.JSONDecodeError:
+                        print(f"  {pat_name}: JSON解析失败")
+
+            # 查找标题
+            titles = re.findall(r'title="([^"]{2,30})"', text)
+            if titles:
+                print(f"  HTML中title: {titles[:5]}")
+
+        except Exception as e:
+            print(f"  {url}: {e}")
+
+    # --- 2. 猫眼API ---
+    print("\n--- [2] 猫眼热度API ---")
+    for name, url, params in [
+        ('web-heat-api', 'https://piaofang.maoyan.com/dashboard-ajax/webHeat',
+         {'orderType': '0', 'platform': '0', 'pageSize': '10', 'pageNum': '1'}),
+        ('heat-overall', 'https://piaofang.maoyan.com/dashboard-ajax/heatData',
+         {'type': 'tv', 'date': ''}),
+        ('second-box', 'https://piaofang.maoyan.com/second-box',
+         {}),
+    ]:
+        try:
+            resp = session.get(url, params=params, headers={
+                'Referer': 'https://piaofang.maoyan.com/',
+            }, timeout=15)
+            print(f"\n  {name}: HTTP {resp.status_code}")
+            try:
+                data = resp.json()
+                print(f"    响应key: {list(data.keys())[:5]}")
+                if 'data' in data:
+                    d = data['data']
+                    if isinstance(d, dict):
+                        print(f"    data key: {list(d.keys())[:5]}")
+                        for k, v in d.items():
+                            if isinstance(v, list) and v:
+                                print(f"    data.{k}: list[{len(v)}]")
+                                if isinstance(v[0], dict):
+                                    print(f"      第1项key: {list(v[0].keys())[:10]}")
+                                    for fk, fv in list(v[0].items())[:8]:
+                                        print(f"        {fk} = {str(fv)[:80]}")
+                    elif isinstance(d, list) and d:
+                        print(f"    data: list[{len(d)}]")
+                        if isinstance(d[0], dict):
+                            print(f"      第1项key: {list(d[0].keys())[:10]}")
+                            for fk, fv in list(d[0].items())[:8]:
+                                print(f"        {fk} = {str(fv)[:80]}")
+            except Exception:
+                print(f"    非JSON: {resp.text[:200]}")
+        except Exception as e:
+            print(f"  {name}: {e}")
+
+    # --- 3. 第三方免费API ---
+    print("\n--- [3] 第三方热度API ---")
+    for name, url in [
+        ('aa1-txvideo', 'https://api.aa1.cn/api/txvideo/'),
+        ('DailyHot', 'https://api-hot.imsyy.top/tencent'),
+    ]:
+        try:
+            resp = session.get(url, timeout=10)
+            print(f"\n  {name}: HTTP {resp.status_code}")
+            try:
+                data = resp.json()
+                print(f"    响应key: {list(data.keys())[:5]}")
+                # 查找列表数据
+                for k, v in data.items():
+                    if isinstance(v, list) and v:
+                        print(f"    {k}: list[{len(v)}]")
+                        if isinstance(v[0], dict):
+                            print(f"      第1项key: {list(v[0].keys())[:8]}")
+                            for fk, fv in list(v[0].items())[:5]:
+                                print(f"        {fk} = {str(fv)[:80]}")
+                        break
+            except Exception:
+                print(f"    非JSON: {resp.text[:100]}")
+        except Exception as e:
+            print(f"  {name}: {e}")
+
+
 # ============================================================
 # 辅助函数
 # ============================================================
@@ -494,6 +606,7 @@ if __name__ == '__main__':
     debug_iqiyi(session)
     debug_mgtv(session)
     debug_youku(session)
+    debug_maoyan(session)
 
     print("\n" + "=" * 70)
     print("调试完成！请将以上输出发给开发者分析。")
