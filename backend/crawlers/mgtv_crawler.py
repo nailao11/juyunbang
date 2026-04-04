@@ -124,14 +124,18 @@ class MgtvCrawler(BaseCrawler):
         items = []
 
         # 尝试多种响应数据路径
-        hit_list = (
-            data.get('data', {}).get('hitDocs', []) or
-            data.get('data', {}).get('list', []) or
-            data.get('data', {}).get('items', []) or
-            data.get('data', {}).get('contents', []) or
-            data.get('data', []) if isinstance(data.get('data'), list) else [] or
-            []
-        )
+        data_field = data.get('data', {})
+        hit_list = []
+        if isinstance(data_field, dict):
+            hit_list = (
+                data_field.get('hitDocs', []) or
+                data_field.get('list', []) or
+                data_field.get('items', []) or
+                data_field.get('contents', []) or
+                []
+            )
+        elif isinstance(data_field, list):
+            hit_list = data_field
 
         if not hit_list:
             return []
@@ -159,12 +163,19 @@ class MgtvCrawler(BaseCrawler):
                     except (ValueError, TypeError):
                         continue
 
-            # 如果常规字段没有，检查所有数字字段
+            # 如果常规字段没有，检查所有数值型字段（包括字符串数字）
             if heat == 0:
                 for k, v in item.items():
                     if isinstance(v, (int, float)) and v > 100:
                         heat = float(v)
                         break
+                    if isinstance(v, str) and v.isdigit() and len(v) >= 4:
+                        try:
+                            heat = float(v)
+                            if heat > 100:
+                                break
+                        except (ValueError, TypeError):
+                            continue
 
             # 封面图
             img = item.get('img', '') or item.get('clipImg', '') or item.get('pic', '') or ''

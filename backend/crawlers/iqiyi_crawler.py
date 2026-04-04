@@ -9,7 +9,7 @@ class IqiyiCrawler(BaseCrawler):
     """
     爱奇艺热度采集器
     策略优先级:
-      1. 风云榜 mesh API（有真实站内热度值）
+      1. 排行榜API（多端点尝试，含风云榜、热播榜等）
       2. 排行榜HTML页面（解析嵌入JSON，含热度）
       3. PCW推荐API（备用，可能无热度值）
     """
@@ -63,8 +63,8 @@ class IqiyiCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='tv'):
-        # 方式1: 风云榜 mesh API（优先，有真实热度）
-        items = self._crawl_mesh_api(category)
+        # 方式1: 排行榜API（多种端点尝试）
+        items = self._crawl_rank_apis(category)
         if items:
             return items
 
@@ -73,63 +73,102 @@ class IqiyiCrawler(BaseCrawler):
         if items:
             return items
 
-        # 方式3: 其他排行API变体
-        items = self._crawl_alt_apis(category)
-        if items:
-            return items
-
-        # 方式4: PCW推荐API（备用，热度可能为0）
+        # 方式3: PCW推荐API（备用，热度可能为0）
         items = self._crawl_pcw_api(category)
         return items
 
     # ----------------------------------------------------------------
-    # 方式1: 风云榜 mesh API
+    # 方式1: 排行榜API（多端点尝试）
     # ----------------------------------------------------------------
-    def _crawl_mesh_api(self, category):
-        """主API: 爱奇艺风云榜（返回真实hot热度值）"""
+    def _crawl_rank_apis(self, category):
+        """尝试多种爱奇艺排行榜API端点"""
         cid = '2' if category == 'tv' else '6'
 
-        # 尝试多种参数组合
-        param_variants = [
-            {'type': 'heat', 'cid': cid, 'limit': '30'},
-            {'type': 'hot', 'cid': cid, 'limit': '30'},
-            {'type': 'heat', 'cid': cid, 'limit': '30', 'date': ''},
+        api_list = [
+            # 风云榜API（多种参数）
+            ('https://mesh.if.iqiyi.com/portal/lw/videolib/data/rank',
+             {'type': 'heat', 'cid': cid, 'limit': '30'}),
+            ('https://mesh.if.iqiyi.com/portal/lw/videolib/data/rank',
+             {'type': 'hot', 'cid': cid, 'limit': '30'}),
+            # 排行榜数据API
+            ('https://pcw-api.iqiyi.com/search/video/videolists',
+             {'channel_id': cid, 'mode': '24', 'pageSize': '30', 'page': '1'}),
+            # 热播榜API
+            ('https://iface2.iqiyi.com/aggregate/3.0/getHotRank',
+             {'cid': cid, 'limit': '30', 'type': 'heat'}),
+            # 热度榜API
+            ('https://pcw-api.iqiyi.com/video/score/billboard',
+             {'channel_id': cid, 'page_size': '30'}),
+            # charts数据
+            ('https://mesh.if.iqiyi.com/portal/lw/videolib/data/charts',
+             {'type': 'hot', 'cid': cid, 'limit': '30'}),
         ]
 
-        for params in param_variants:
-            data = self.fetch_json(
-                'https://mesh.if.iqiyi.com/portal/lw/videolib/data/rank',
-                params=params
-            )
+        for url, params in api_list:
+            data = self.fetch_json(url, params=params)
             if not data:
                 continue
 
+            # 检查是否是错误响应（mesh API可能返回error对象）
+            if 'error' in data and 'status' in data:
+                continue
+
             items = []
-            rank_list = data.get('data', {}).get('list', [])
+            # 尝试多种响应路径
+            rank_list = []
+            data_field = data.get('data', {})
+            if isinstance(data_field, dict):
+                rank_list = (data_field.get('list', []) or
+                             data_field.get('rankList', []) or
+                             data_field.get('items', []) or
+                             data_field.get('docinfos', []) or [])
+            elif isinstance(data_field, list):
+                rank_list = data_field
+
             if not rank_list:
-                # 尝试其他响应路径
-                rank_list = (data.get('data', {}).get('rankList', []) or
-                             data.get('data', {}).get('items', []) or
-                             data.get('list', []) or [])
+                rank_list = data.get('list', []) or []
 
             for i, item in enumerate(rank_list[:30]):
-                title = item.get('name', '') or item.get('title', '')
-                heat = item.get('hot', 0) or item.get('score', 0) or item.get('heat', 0)
-                poster = (item.get('imageUrl', '') or item.get('img', '') or
-                          item.get('pic', '') or '')
+                if not isinstance(item, dict):
+                    continue
+                # 有些API把数据嵌套在albumDocInfo/videoDocInfo中
+                inner = (item.get('albumDocInfo', {}) or
+                         item.get('videoDocInfo', {}) or item)
 
-                if title and heat:
-                    items.append({
-                        'title': self._normalize_title(title),
-                        'heat_value': float(heat),
-                        'poster_url': poster,
-                        'rank': i + 1,
-                        'category': category,
-                        'is_finished': False,
-                    })
+                title = (inner.get('name', '') or inner.get('title', '') or
+                         inner.get('albumName', '') or '')
+                if not title:
+                    continue
+
+                heat = 0
+                for key in ['hot', 'score', 'heat', 'hotScore',
+                            'contentRating', 'playCount', 'totalPlayCount']:
+                    val = inner.get(key) or item.get(key)
+                    if val is not None:
+                        try:
+                            h = float(str(val).replace(',', ''))
+                            if h > 0:
+                                heat = h
+                                break
+                        except (ValueError, TypeError):
+                            continue
+
+                poster = (inner.get('imageUrl', '') or inner.get('img', '') or
+                          inner.get('pic', '') or inner.get('coverUrl', '') or '')
+
+                items.append({
+                    'title': self._normalize_title(title),
+                    'heat_value': heat,
+                    'poster_url': poster,
+                    'rank': i + 1,
+                    'category': category,
+                    'is_finished': False,
+                })
 
             if items:
-                logger.info(f"[爱奇艺] 风云榜: {len(items)}条有热度")
+                has_heat = sum(1 for x in items if x['heat_value'] > 0)
+                api_name = url.split('/')[-1]
+                logger.info(f"[爱奇艺] API({api_name}): {len(items)}条, {has_heat}条有热度")
                 return items
 
         return []
@@ -292,54 +331,7 @@ class IqiyiCrawler(BaseCrawler):
         return items
 
     # ----------------------------------------------------------------
-    # 方式3: 其他排行API变体
-    # ----------------------------------------------------------------
-    def _crawl_alt_apis(self, category):
-        """尝试其他爱奇艺排行API"""
-        cid = '2' if category == 'tv' else '6'
-
-        alt_urls = [
-            ('https://mesh.if.iqiyi.com/portal/lw/videolib/data/charts',
-             {'type': 'hot', 'cid': cid, 'limit': '30'}),
-            ('https://pcw-api.iqiyi.com/search/video/videolists',
-             {'channel_id': cid, 'mode': '24', 'pageSize': '30', 'page': '1'}),
-        ]
-
-        for url, params in alt_urls:
-            data = self.fetch_json(url, params=params)
-            if not data:
-                continue
-
-            items = []
-            # 尝试多种响应路径
-            rank_list = (data.get('data', {}).get('list', []) or
-                         data.get('data', {}).get('items', []) or
-                         data.get('list', []) or [])
-
-            for i, item in enumerate(rank_list[:30]):
-                title = item.get('name', '') or item.get('title', '')
-                heat = (item.get('hot', 0) or item.get('score', 0) or
-                        item.get('heat', 0) or 0)
-                poster = (item.get('imageUrl', '') or item.get('img', '') or
-                          item.get('pic', '') or '')
-
-                if title and heat:
-                    items.append({
-                        'title': self._normalize_title(title),
-                        'heat_value': float(heat),
-                        'poster_url': poster,
-                        'rank': i + 1,
-                        'category': category,
-                        'is_finished': False,
-                    })
-
-            if items:
-                return items
-
-        return []
-
-    # ----------------------------------------------------------------
-    # 方式4: PCW推荐API（备用）
+    # 方式3: PCW推荐API（备用）
     # ----------------------------------------------------------------
     def _crawl_pcw_api(self, category):
         """

@@ -86,83 +86,114 @@ class TencentCrawler(BaseCrawler):
     # ----------------------------------------------------------------
     def _fetch_hot_rank(self, category):
         """
-        腾讯视频热搜榜API，返回heatScore字段。
-        尝试多个channelId直到找到有数据的。
+        腾讯视频热搜榜API。
+        响应结构: data.navItemList[N].hotRankResult.rankItemList
+        每个navItem是一个分类tab（热搜/电视剧/综艺等），
+        rankItemList包含排行数据（title, heatScore等）。
         """
-        # HotRankHttp的channelId可能与getPage不同
-        # 排行页URL https://v.qq.com/biu/ranks/?t=hotsearch 可能用简单数字ID
-        channel_ids = {
-            'tv': ['2', '1', '100173', '100113', '150203', '电视剧', 'tv'],
-            'variety': ['5', '3', '100109', '100105', '综艺', 'variety'],
-        }
-
         headers = {
             'Content-Type': 'application/json',
             'Referer': 'https://v.qq.com/',
             'Origin': 'https://v.qq.com',
         }
 
-        for cid in channel_ids.get(category, ['100113']):
-            time.sleep(random.uniform(0.5, 1.5))
-            try:
-                # 尝试多种请求body格式
-                for body in [
-                    {'pageNum': 0, 'pageSize': 30, 'channelId': cid},
-                    {'pageNum': 0, 'pageSize': 30, 'channelId': cid, 'period': 'day'},
-                    {'pageNum': 0, 'pageSize': 50, 'channelId': str(cid)},
-                ]:
-                    resp = self.session.post(
-                        'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp',
-                        json=body, headers=headers, timeout=15
-                    )
-                    data = resp.json()
+        # 所有channelId返回相同navItemList，只需请求一次
+        time.sleep(random.uniform(0.5, 1.5))
+        try:
+            resp = self.session.post(
+                'https://pbaccess.video.qq.com/trpc.videosearch.hot_rank.HotRankServantHttp/HotRankHttp',
+                json={'pageNum': 0, 'pageSize': 50, 'channelId': '2'},
+                headers=headers, timeout=15
+            )
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"[腾讯视频] HotRankHttp请求失败: {e}")
+            return []
 
-                    # 尝试多种响应路径
-                    item_list = (
-                        data.get('data', {}).get('itemList', []) or
-                        data.get('data', {}).get('rankItemList', []) or
-                        data.get('data', {}).get('list', []) or
-                        data.get('data', {}).get('items', []) or
-                        data.get('itemList', []) or []
-                    )
+        # 从navItemList中找到对应分类的tab
+        nav_list = data.get('data', {}).get('navItemList', [])
+        if not nav_list:
+            logger.warning("[腾讯视频] HotRankHttp无navItemList")
+            return []
 
-                    if not item_list:
-                        continue
+        # 分类关键词匹配
+        category_keywords = {
+            'tv': ['电视剧', '剧集', '电视'],
+            'variety': ['综艺'],
+        }
+        keywords = category_keywords.get(category, ['电视剧'])
 
-                    items = []
-                    for i, item in enumerate(item_list[:30]):
-                        title = (item.get('title', '') or item.get('name', '') or
-                                 item.get('showTitle', '') or '')
-                        heat = (item.get('heatScore', 0) or item.get('hotScore', 0) or
-                                item.get('hot', 0) or item.get('score', 0) or 0)
-                        poster = (item.get('picUrl', '') or item.get('coverUrl', '') or
-                                  item.get('pic', '') or '')
+        # 遍历所有tab，优先找精确分类，其次用第一个有数据的tab（热搜=全部）
+        target_tab = None
+        fallback_tab = None
 
-                        if title:
-                            try:
-                                heat = float(str(heat).replace(',', ''))
-                            except (ValueError, TypeError):
-                                heat = 0
+        for tab in nav_list:
+            tab_name = tab.get('tabName', '')
+            rank_result = tab.get('hotRankResult', {})
+            rank_items = rank_result.get('rankItemList', [])
 
-                            items.append({
-                                'title': self._normalize_title(title),
-                                'heat_value': heat,
-                                'poster_url': poster,
-                                'rank': i + 1,
-                                'category': category,
-                                'is_finished': False,
-                            })
-
-                    if items:
-                        has_heat = sum(1 for x in items if x['heat_value'] > 0)
-                        logger.info(f"[腾讯视频] HotRank(cid={cid}): {len(items)}条, {has_heat}条有热度")
-                        return items
-
-            except Exception as e:
-                logger.debug(f"[腾讯视频] HotRank(cid={cid}): {e}")
+            if not rank_items:
                 continue
 
-        return []
+            # 检查是否匹配目标分类
+            if any(kw in tab_name for kw in keywords):
+                target_tab = tab
+                break
+
+            # 第一个有数据的tab作为fallback（通常是"热搜"=全部）
+            if fallback_tab is None:
+                fallback_tab = tab
+
+        chosen_tab = target_tab or fallback_tab
+        if not chosen_tab:
+            logger.warning("[腾讯视频] HotRankHttp所有tab均无rankItemList")
+            return []
+
+        tab_name = chosen_tab.get('tabName', '?')
+        rank_result = chosen_tab.get('hotRankResult', {})
+        rank_items = rank_result.get('rankItemList', [])
+
+        logger.info(f"[腾讯视频] HotRank使用tab '{tab_name}', 共{len(rank_items)}条")
+
+        items = []
+        for i, item in enumerate(rank_items[:30]):
+            title = (item.get('title', '') or item.get('name', '') or
+                     item.get('showTitle', '') or '')
+            if not title:
+                continue
+
+            # 热度值: 尝试多种字段名
+            heat = 0
+            for key in ['heatScore', 'hotScore', 'score', 'hot', 'heat',
+                         'changeOrder', 'totalSize']:
+                val = item.get(key)
+                if val is not None:
+                    try:
+                        h = float(str(val).replace(',', ''))
+                        if h > 0:
+                            heat = h
+                            break
+                    except (ValueError, TypeError):
+                        continue
+
+            # 封面图
+            poster = (item.get('picUrl', '') or item.get('coverUrl', '') or
+                      item.get('pic', '') or '')
+
+            items.append({
+                'title': self._normalize_title(title),
+                'heat_value': heat,
+                'poster_url': poster,
+                'rank': i + 1,
+                'category': category,
+                'is_finished': False,
+            })
+
+        if items:
+            has_heat = sum(1 for x in items if x['heat_value'] > 0)
+            logger.info(f"[腾讯视频] HotRank: {len(items)}条, {has_heat}条有热度")
+
+        return items
 
     # ----------------------------------------------------------------
     # 方式2: 排行榜HTML页面
