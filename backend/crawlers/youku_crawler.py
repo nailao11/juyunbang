@@ -8,10 +8,11 @@ from .base_crawler import BaseCrawler
 class YoukuCrawler(BaseCrawler):
     """
     优酷热度采集器
-    策略：
-      1. 优酷移动端网关API
-      2. 优酷频道列表页HTML解析（最稳定备用）
-    注意：优酷反爬较严格，失败属正常现象
+    策略优先级:
+      1. 排行榜HTML页面（解析嵌入JSON数据）
+      2. 移动端网关API
+      3. 频道列表页HTML解析
+    注意: 优酷反爬较严格，部分接口可能不可用。
     """
 
     PLATFORM_ID = 2
@@ -41,7 +42,7 @@ class YoukuCrawler(BaseCrawler):
                     poster_url=item.get('poster_url', ''),
                     is_finished=item.get('is_finished', False),
                 )
-                if drama_id:
+                if drama_id and item.get('heat_value', 0) > 0:
                     try:
                         self.save_heat_data(
                             drama_id=drama_id,
@@ -54,7 +55,7 @@ class YoukuCrawler(BaseCrawler):
                         logger.error(f"[优酷] 保存失败 {item['title']}: {e}")
 
             self.log_task('youku_heat', 'success', saved_count)
-            logger.info(f"[优酷] 采集完成，共{len(results)}条，保存{saved_count}条")
+            logger.info(f"[优酷] 采集完成，共{len(results)}条，保存热度{saved_count}条")
 
         except Exception as e:
             logger.error(f"[优酷] 采集异常: {e}")
@@ -63,26 +64,155 @@ class YoukuCrawler(BaseCrawler):
         return results
 
     def _crawl_rank(self, category='电视剧', cid='97'):
-        """多接口策略"""
-        # 方式1: 优酷移动端API
+        # 方式1: 排行榜页面HTML（嵌入JSON数据）
+        items = self._fetch_rank_html(cid, category)
+        if items:
+            return items
+
+        # 方式2: 移动端API
         items = self._fetch_from_api(cid, category)
         if items:
             return items
 
-        # 方式2: 优酷搜索热门接口
-        logger.warning(f"[优酷] 主接口无数据，尝试热门接口 {category}")
-        items = self._fetch_from_hot(category)
-        if items:
-            return items
-
-        # 方式3: HTML列表页
-        logger.warning(f"[优酷] 热门接口无数据，尝试HTML采集 {category}")
-        items = self._fetch_from_html(cid, category)
+        # 方式3: 频道列表页HTML
+        items = self._fetch_from_channel_html(cid, category)
         return items
 
+    # ----------------------------------------------------------------
+    # 方式1: 排行榜HTML页面
+    # ----------------------------------------------------------------
+    def _fetch_rank_html(self, cid, category):
+        """优酷排行榜HTML — 解析嵌入JSON"""
+        cid_map = {'97': 'tv', '85': 'variety'}
+        cat = cid_map.get(cid, 'tv')
+
+        urls = [
+            f'https://www.youku.com/rank/{cat}',
+            'https://www.youku.com/rank',
+            f'https://www.youku.com/category/show/c_{cid}_s_1_d_1.html',
+        ]
+
+        for url in urls:
+            resp = self.fetch(url, headers={'Referer': 'https://www.youku.com/'})
+            if not resp:
+                continue
+
+            text = resp.text
+            items = []
+
+            # 尝试提取嵌入JSON
+            for pattern in [
+                r'window\.__INITIAL_DATA__\s*=\s*(\{.+?\});\s*</script>',
+                r'window\.__NEXT_DATA__[^>]*>\s*(\{.+?\})\s*</script>',
+                r'window\.__NUXT__\s*=\s*(\{.+?\});\s*</script>',
+                r'"rankList"\s*:\s*(\[.+?\])\s*[,}]',
+            ]:
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    try:
+                        json_data = json.loads(match.group(1))
+                        items = self._extract_from_json(json_data, category)
+                    except json.JSONDecodeError:
+                        continue
+
+                if items:
+                    has_heat = sum(1 for x in items if x['heat_value'] > 0)
+                    logger.info(f"[优酷] 排行HTML({url}): {len(items)}条, {has_heat}条有热度")
+                    return items
+
+            # 直接从HTML提取标题和热度
+            items = self._parse_html_items(text, category)
+            if items:
+                logger.info(f"[优酷] HTML直接解析: {len(items)}条")
+                return items
+
+        return []
+
+    def _extract_from_json(self, data, category):
+        """递归搜索JSON中的排行列表"""
+        items = []
+
+        def _search(obj, depth=0):
+            if depth > 8 or len(items) >= 30:
+                return
+            if isinstance(obj, list) and len(obj) >= 5:
+                has_titles = sum(1 for x in obj[:5]
+                                if isinstance(x, dict) and
+                                any(k in x for k in ('title', 'name', 'show_name',
+                                                       'showName', 'videoTitle')))
+                if has_titles >= 3:
+                    for i, item in enumerate(obj[:30]):
+                        if not isinstance(item, dict):
+                            continue
+                        title = (item.get('title', '') or item.get('name', '') or
+                                 item.get('show_name', '') or item.get('showName', '') or '')
+                        heat = (item.get('heat', 0) or item.get('hot', 0) or
+                                item.get('score', 0) or item.get('hotScore', 0) or
+                                item.get('total_vv', 0) or 0)
+                        poster = (item.get('img', '') or item.get('cover', '') or
+                                  item.get('thumb_url', '') or item.get('pic', '') or '')
+
+                        if title:
+                            try:
+                                heat = float(str(heat).replace(',', ''))
+                            except (ValueError, TypeError):
+                                heat = 0
+                            items.append({
+                                'title': self._normalize_title(title),
+                                'heat_value': heat,
+                                'poster_url': poster,
+                                'rank': i + 1,
+                                'category': category,
+                                'is_finished': False,
+                            })
+                    return
+            if isinstance(obj, dict):
+                for v in obj.values():
+                    _search(v, depth + 1)
+            elif isinstance(obj, list):
+                for v in obj:
+                    _search(v, depth + 1)
+
+        _search(data)
+        return items
+
+    def _parse_html_items(self, text, category):
+        """从HTML标签中提取标题和热度"""
+        items = []
+        seen = set()
+
+        # 方式1: 匹配 title 属性
+        for match in re.finditer(r'title="([^"]{2,30})"', text):
+            title = self._normalize_title(match.group(1))
+            if not title or title in seen:
+                continue
+            if any(skip in title for skip in ['优酷', '登录', '客户端', '首页']):
+                continue
+            seen.add(title)
+            items.append({
+                'title': title,
+                'heat_value': 0,  # HTML中可能没有热度
+                'poster_url': '',
+                'rank': len(items) + 1,
+                'category': category,
+                'is_finished': False,
+            })
+            if len(items) >= 30:
+                break
+
+        # 补充封面图
+        imgs = re.findall(r'src="(https?://[^"]*(?:ykimg|youku)[^"]*\.(?:jpg|png))"', text)
+        for i, img_url in enumerate(imgs):
+            if i < len(items):
+                items[i]['poster_url'] = img_url
+
+        return items
+
+    # ----------------------------------------------------------------
+    # 方式2: 移动端API
+    # ----------------------------------------------------------------
     def _fetch_from_api(self, cid, category):
         """优酷移动端网关API"""
-        url = 'https://acs.youku.com/h5/mtop.youku.columbus.gateway.new.execute/1.0/'
         headers = {'Referer': 'https://www.youku.com/'}
         params = {
             'jsv': '2.7.2',
@@ -95,7 +225,10 @@ class YoukuCrawler(BaseCrawler):
             })
         }
 
-        data = self.fetch_json(url, params=params, headers=headers)
+        data = self.fetch_json(
+            'https://acs.youku.com/h5/mtop.youku.columbus.gateway.new.execute/1.0/',
+            params=params, headers=headers
+        )
         if not data:
             return []
 
@@ -112,112 +245,45 @@ class YoukuCrawler(BaseCrawler):
             )
 
             for i, show in enumerate(show_list[:30]):
-                title = show.get('title', '') or show.get('show_name', '') or show.get('name', '')
-                heat = show.get('heat', 0) or show.get('hot_value', 0) or show.get('total_vv', 0)
-                poster = show.get('img', '') or show.get('cover', '') or show.get('thumb_url', '') or ''
-                episode_info = show.get('episode_total', '') or show.get('last_episode', '')
-                is_finished = show.get('completed', False) or '完结' in str(episode_info)
+                title = (show.get('title', '') or show.get('show_name', '') or
+                         show.get('name', '') or '')
+                heat = (show.get('heat', 0) or show.get('hot_value', 0) or
+                        show.get('total_vv', 0) or 0)
+                poster = (show.get('img', '') or show.get('cover', '') or
+                          show.get('thumb_url', '') or '')
+                is_finished = show.get('completed', False) or '完结' in str(
+                    show.get('episode_total', ''))
 
                 if title:
+                    try:
+                        heat = float(heat) if heat else 0
+                    except (ValueError, TypeError):
+                        heat = 0
                     items.append({
                         'title': self._normalize_title(title),
-                        'heat_value': float(heat) if heat else max(1000, 9500 - i * 300),
+                        'heat_value': heat,
                         'poster_url': poster,
                         'rank': i + 1,
                         'category': category,
                         'is_finished': is_finished,
-                        'platform': 'youku'
                     })
         except Exception as e:
             logger.error(f"[优酷] API解析失败: {e}")
 
-        return items
-
-    def _fetch_from_hot(self, category):
-        """优酷热门/搜索接口"""
-        type_map = {'电视剧': '1', '综艺': '6'}
-        type_id = type_map.get(category, '1')
-
-        # 优酷搜索推荐接口
-        url = 'https://search.youku.com/api/search'
-        params = {
-            'keyword': '热播' + category,
-            'pg': '1',
-            'pageSize': '30',
-            'catType': type_id,
-        }
-        headers = {
-            'Referer': 'https://search.youku.com/',
-        }
-
-        data = self.fetch_json(url, params=params, headers=headers)
-        if not data:
-            return []
-
-        items = []
-        try:
-            results_list = data.get('pageComponentList', []) or data.get('data', []) or []
-            for i, show in enumerate(results_list[:30]):
-                title = show.get('title', '') or show.get('name', '')
-                # 去HTML标签
-                title = re.sub(r'<[^>]+>', '', title) if title else ''
-                poster = show.get('img', '') or show.get('thumbUrl', '') or ''
-                heat = show.get('heat', 0) or show.get('stripeBottom', 0) or 0
-
-                if title:
-                    items.append({
-                        'title': self._normalize_title(title),
-                        'heat_value': float(heat) if heat else max(1000, 9500 - i * 300),
-                        'poster_url': poster,
-                        'rank': i + 1,
-                        'category': category,
-                        'is_finished': False,
-                        'platform': 'youku'
-                    })
-        except Exception as e:
-            logger.error(f"[优酷] 热门接口解析失败: {e}")
+        if items:
+            has_heat = sum(1 for x in items if x['heat_value'] > 0)
+            logger.info(f"[优酷] API: {len(items)}条, {has_heat}条有热度")
 
         return items
 
-    def _fetch_from_html(self, cid, category):
+    # ----------------------------------------------------------------
+    # 方式3: 频道列表页HTML
+    # ----------------------------------------------------------------
+    def _fetch_from_channel_html(self, cid, category):
         """从优酷列表页HTML提取"""
         url = f'https://list.youku.com/category/show/c_{cid}/s_1_d_1.html'
         resp = self.fetch(url)
         if not resp:
             return []
 
-        items = []
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, 'html.parser')
-
-            # 优酷列表页中的剧集卡片
-            show_items = soup.select('.pack-film-card, .p-thumb, li[data-id], .yk-pack-film')
-
-            for i, el in enumerate(show_items[:30]):
-                title_el = el.select_one('.title, a[title], .info-title, .pack-title')
-                title = ''
-                if title_el:
-                    title = title_el.get('title', '') or title_el.get_text(strip=True)
-
-                img_el = el.select_one('img')
-                poster = ''
-                if img_el:
-                    poster = img_el.get('src', '') or img_el.get('data-src', '') or ''
-
-                if title:
-                    items.append({
-                        'title': self._normalize_title(title),
-                        'heat_value': max(1000, 9500 - i * 300),
-                        'poster_url': poster,
-                        'rank': i + 1,
-                        'category': category,
-                        'is_finished': False,
-                        'platform': 'youku'
-                    })
-        except ImportError:
-            logger.warning("[优酷] bs4未安装，无法解析HTML")
-        except Exception as e:
-            logger.error(f"[优酷] HTML解析失败: {e}")
-
-        return items
+        return self._parse_html_items(resp.text, category)
