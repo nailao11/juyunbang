@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
-from ..utils.response import success, error, page_data
+from ..utils.response import success, error
 
 heat_bp = Blueprint('heat', __name__)
 

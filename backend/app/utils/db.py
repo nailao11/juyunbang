@@ -13,9 +13,9 @@ def get_pool():
     if _pool is None:
         _pool = PooledDB(
             creator=pymysql,
-            maxconnections=20,
-            mincached=5,
-            maxcached=10,
+            maxconnections=10,
+            mincached=2,
+            maxcached=5,
             blocking=True,
             host=Config.DB_HOST,
             port=Config.DB_PORT,
@@ -85,14 +85,3 @@ def insert(sql, params=None):
         conn.close()
 
 
-def insert_many(sql, params_list):
-    conn = get_db()
-    try:
-        with conn.cursor() as cursor:
-            affected = cursor.executemany(sql, params_list)
-            return affected
-    except Exception as e:
-        logger.error(f"批量插入失败: {sql}, 错误: {e}")
-        raise
-    finally:
-        conn.close()

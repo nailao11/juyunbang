@@ -37,18 +37,3 @@ def cache_set(key, value, expire=300):
         logger.error(f"Redis写入失败: {key}, 错误: {e}")
 
 
-def cache_delete(key):
-    try:
-        get_redis().delete(key)
-    except Exception as e:
-        logger.error(f"Redis删除失败: {key}, 错误: {e}")
-
-
-def cache_delete_pattern(pattern):
-    try:
-        r = get_redis()
-        keys = r.keys(pattern)
-        if keys:
-            r.delete(*keys)
-    except Exception as e:
-        logger.error(f"Redis批量删除失败: {pattern}, 错误: {e}")
