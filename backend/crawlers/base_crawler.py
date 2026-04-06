@@ -197,6 +197,36 @@ class BaseCrawler:
     def clear_drama_cache(cls):
         cls._drama_cache.clear()
 
+    def _save_platform_url(self, drama_id, platform_id, platform_drama_id, platform_url):
+        """保存/更新剧集在平台的URL（供下次采集直接复用）"""
+        if not drama_id or not platform_url:
+            return
+        try:
+            from app.utils.db import execute
+            execute(
+                "INSERT INTO drama_platforms (drama_id, platform_id, platform_drama_id, platform_url) "
+                "VALUES (%s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE platform_drama_id=VALUES(platform_drama_id), "
+                "platform_url=VALUES(platform_url)",
+                (drama_id, platform_id, platform_drama_id or '', platform_url)
+            )
+        except Exception as e:
+            logger.debug(f"[{self.platform_name}] 保存平台URL失败: {e}")
+
+    def _has_recent_heat(self, drama_id, platform_id, minutes=10):
+        """检查是否在近N分钟内已保存过该剧的热度（避免同一轮重复采集）"""
+        try:
+            from app.utils.db import query_one
+            row = query_one(
+                "SELECT id FROM heat_realtime "
+                "WHERE drama_id=%s AND platform_id=%s "
+                "AND record_time > DATE_SUB(NOW(), INTERVAL %s MINUTE) LIMIT 1",
+                (drama_id, platform_id, minutes)
+            )
+            return row is not None
+        except Exception:
+            return False
+
     def crawl(self):
         raise NotImplementedError
 
@@ -226,34 +256,6 @@ class BaseCrawler:
             "VALUES (%s, %s, %s, %s)",
             (drama_id, platform_id, total_playcount, datetime.now())
         )
-
-    def save_social_data(self, drama_id, **kwargs):
-        """保存社交媒体数据"""
-        from app.utils.db import execute
-        from datetime import date
-
-        if not kwargs:
-            return
-
-        today = date.today()
-        columns = ['drama_id', 'stat_date']
-        values = [drama_id, today]
-        update_parts = []
-
-        for col, val in kwargs.items():
-            columns.append(col)
-            values.append(val)
-            update_parts.append(f"{col} = VALUES({col})")
-
-        col_str = ', '.join(columns)
-        placeholder_str = ', '.join(['%s'] * len(values))
-        update_str = ', '.join(update_parts)
-
-        sql = (
-            f"INSERT INTO social_daily ({col_str}) VALUES ({placeholder_str}) "
-            f"ON DUPLICATE KEY UPDATE {update_str}"
-        )
-        execute(sql, tuple(values))
 
     def log_task(self, task_type, status, records_count=0, error_message=None):
         """记录采集日志"""
