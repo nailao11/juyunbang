@@ -197,6 +197,68 @@ class BaseCrawler:
     def clear_drama_cache(cls):
         cls._drama_cache.clear()
 
+    def _save_platform_url(self, drama_id, platform_id, platform_drama_id, platform_url):
+        """保存/更新剧集在平台的URL（供下次采集直接复用）"""
+        if not drama_id or not platform_url:
+            return
+        try:
+            from app.utils.db import execute
+            execute(
+                "INSERT INTO drama_platforms (drama_id, platform_id, platform_drama_id, platform_url) "
+                "VALUES (%s, %s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE platform_drama_id=VALUES(platform_drama_id), "
+                "platform_url=VALUES(platform_url)",
+                (drama_id, platform_id, platform_drama_id or '', platform_url)
+            )
+        except Exception as e:
+            logger.debug(f"[{self.platform_name}] 保存平台URL失败: {e}")
+
+    def _get_saved_platform_url(self, drama_id, platform_id):
+        """从数据库读取已保存的平台URL"""
+        try:
+            from app.utils.db import query_one
+            row = query_one(
+                "SELECT platform_drama_id, platform_url FROM drama_platforms "
+                "WHERE drama_id=%s AND platform_id=%s LIMIT 1",
+                (drama_id, platform_id)
+            )
+            if row:
+                return row.get('platform_drama_id'), row.get('platform_url')
+        except Exception:
+            pass
+        return None, None
+
+    def _is_new_drama(self, air_date_str, days_window=30):
+        """判断air_date是否在近N天内（仅采集新剧）"""
+        if not air_date_str:
+            return False  # 无首播日期 → 视为不新
+        try:
+            from datetime import datetime, date, timedelta
+            if isinstance(air_date_str, date):
+                d = air_date_str
+            else:
+                # 解析多种日期格式
+                s = str(air_date_str).strip()[:10].replace('/', '-')
+                d = datetime.strptime(s, '%Y-%m-%d').date()
+            cutoff = date.today() - timedelta(days=days_window)
+            return d >= cutoff
+        except Exception:
+            return False
+
+    def _has_recent_heat(self, drama_id, platform_id, minutes=10):
+        """检查是否在近N分钟内已保存过该剧的热度（避免同一轮重复采集）"""
+        try:
+            from app.utils.db import query_one
+            row = query_one(
+                "SELECT id FROM heat_realtime "
+                "WHERE drama_id=%s AND platform_id=%s "
+                "AND record_time > DATE_SUB(NOW(), INTERVAL %s MINUTE) LIMIT 1",
+                (drama_id, platform_id, minutes)
+            )
+            return row is not None
+        except Exception:
+            return False
+
     def crawl(self):
         raise NotImplementedError
 

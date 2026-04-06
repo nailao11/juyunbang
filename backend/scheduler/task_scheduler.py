@@ -24,50 +24,22 @@ logger.add(
 
 
 def job_crawl_heat():
-    """每15分钟：采集各平台热度数据（优先使用DailyHot统一API）"""
+    """每15分钟：采集近30天新剧的站内热度（使用Playwright无头浏览器）"""
     logger.info("=== 开始热度数据采集任务 ===")
     try:
         from crawlers.base_crawler import BaseCrawler
         BaseCrawler.clear_drama_cache()
 
-        total_saved = 0
+        from crawlers.airing_crawler import AiringCrawler
+        crawler = AiringCrawler()
+        total_saved = crawler.crawl()
 
-        # 方式1（推荐）: DailyHot统一API — 一次调用获取全部4个平台数据
-        try:
-            from crawlers.dailyhot_crawler import DailyHotCrawler
-            crawler = DailyHotCrawler()
-            saved = crawler.crawl()
-            total_saved += saved if isinstance(saved, int) else 0
-            if total_saved > 0:
-                logger.info(f"=== DailyHot采集完成，保存 {total_saved} 条 ===")
-                return
-        except Exception as e:
-            logger.warning(f"DailyHot采集失败，切换到单平台爬虫: {e}")
-
-        # 方式2（降级）: 逐平台爬虫
-        from crawlers.iqiyi_crawler import IqiyiCrawler
-        from crawlers.tencent_crawler import TencentCrawler
-        from crawlers.youku_crawler import YoukuCrawler
-        from crawlers.mgtv_crawler import MgtvCrawler
-
-        crawlers = [
-            IqiyiCrawler(),
-            TencentCrawler(),
-            YoukuCrawler(),
-            MgtvCrawler(),
-        ]
-
-        for crawler in crawlers:
-            try:
-                results = crawler.crawl()
-                total_saved += len(results) if results else 0
-            except Exception as e:
-                logger.error(f"{crawler.platform_name} 采集失败: {e}")
-
-        logger.info(f"=== 热度采集完成，本轮共采集 {total_saved} 条数据 ===")
+        logger.info(f"=== 热度采集完成，本轮共保存 {total_saved} 条 ===")
 
     except Exception as e:
         logger.error(f"热度采集任务异常: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def job_clean_data():
