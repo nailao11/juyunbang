@@ -23,14 +23,13 @@ Page({
     }
   },
 
-  // 选择剧集
+  // 选择剧集 — 以 pick 模式打开搜索页，搜索页通过 eventChannel 回传选中项
   selectDrama(e) {
     const slot = e.currentTarget.dataset.slot
     this.data._selectSlot = slot
 
-    // 跳转搜索页选择
     wx.navigateTo({
-      url: '/pages/search/search',
+      url: '/pages/search/search?pick=1',
       events: {
         selectDrama: (drama) => {
           this.onDramaSelected(drama, slot)
@@ -78,7 +77,8 @@ Page({
     this.setData({ loading: true })
     try {
       const data = await api.get('/heat/realtime/compare', {
-        drama_ids: this.data.dramaA.id + ',' + this.data.dramaB.id
+        drama_ids: this.data.dramaA.id + ',' + this.data.dramaB.id,
+        tab: this.data.compareTab
       })
 
       // 格式化对比指标
@@ -90,15 +90,17 @@ Page({
         b_win: Number(m.raw_b) > Number(m.raw_a)
       }))
 
-      const totalA = data.score_a || 50
-      const totalB = data.score_b || 50
-      const total = totalA + totalB
+      const scoreA = Number(data.score_a)
+      const scoreB = Number(data.score_b)
+      const hasScore = Number.isFinite(scoreA) && Number.isFinite(scoreB) && (scoreA + scoreB) > 0
+      const aPct = hasScore ? Math.round(scoreA / (scoreA + scoreB) * 100) : 50
+      const bPct = 100 - aPct
 
       this.setData({
         compareData: {
           metrics,
-          a_score_pct: Math.round(totalA / total * 100),
-          b_score_pct: Math.round(totalB / total * 100),
+          a_score_pct: aPct,
+          b_score_pct: bPct,
           summary: data.summary || '两部剧各有千秋'
         },
         loading: false

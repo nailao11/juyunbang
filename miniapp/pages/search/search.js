@@ -17,19 +17,35 @@ Page({
     resultList: [],
     totalCount: 0,
     page: 1,
-    hasMore: true
+    hasMore: true,
+    // 选择模式：当上游页面（如 compare）以 events 方式拉起搜索时为 true
+    pickMode: false
   },
 
   _suggestTimer: null,
 
-  onLoad() {
+  onLoad(options) {
     const systemInfo = app.globalData.systemInfo || wx.getSystemInfoSync()
     this.setData({
       statusBarHeight: systemInfo.statusBarHeight || 20,
-      darkMode: app.globalData.themeMode === 'dark'
+      darkMode: app.globalData.themeMode === 'dark',
+      pickMode: options && options.pick === '1'
     })
     this.loadHotSearch()
     this.loadHistory()
+  },
+
+  // 选中一部剧：如果处于选择模式则通过 eventChannel 回传给调用方，否则跳转详情
+  _pickOrNavigate(drama) {
+    if (this.data.pickMode) {
+      const eventChannel = this.getOpenerEventChannel && this.getOpenerEventChannel()
+      if (eventChannel && typeof eventChannel.emit === 'function') {
+        eventChannel.emit('selectDrama', drama)
+      }
+      wx.navigateBack({ delta: 1 })
+      return true
+    }
+    return false
   },
 
   // 加载热搜榜
@@ -162,6 +178,9 @@ Page({
     const { keyword, id } = e.currentTarget.dataset
     if (id) {
       this.saveHistory(keyword)
+      // 选择模式：把建议项整条回传
+      const drama = (this.data.suggestList || []).find(s => String(s.id) === String(id))
+      if (drama && this._pickOrNavigate(drama)) return
       wx.navigateTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
     } else {
       this.setData({ keyword })
@@ -193,9 +212,11 @@ Page({
     })
   },
 
-  // 跳转详情
+  // 跳转详情（或选择模式下回传给上游页面）
   goDetail(e) {
     const id = e.currentTarget.dataset.id
+    const drama = (this.data.resultList || []).find(d => String(d.id) === String(id))
+    if (drama && this._pickOrNavigate(drama)) return
     wx.navigateTo({ url: `/pages/drama-detail/drama-detail?id=${id}` })
   },
 
