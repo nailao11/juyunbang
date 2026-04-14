@@ -79,6 +79,19 @@ def drama_detail(drama_id):
     else:
         drama['genres'] = []
 
+    # 从 air_date 推导出年份（供前端 drama-detail 页渲染使用）
+    air_date = drama.get('air_date')
+    year = None
+    if air_date is not None:
+        if hasattr(air_date, 'year'):
+            year = air_date.year
+        else:
+            try:
+                year = int(str(air_date)[:4])
+            except (ValueError, TypeError):
+                year = None
+    drama['year'] = year
+
     # 获取播出平台
     platforms = query(
         "SELECT p.name, p.short_name, p.color, dp.is_exclusive, dp.platform_url "

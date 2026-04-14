@@ -7,8 +7,8 @@
     <view class="user-section">
       <!-- 头像 -->
       <view class="avatar-wrap" bindtap="chooseAvatar">
-        <image class="avatar" src="{{userInfo.avatar || '/images/default/avatar.png'}}" mode="aspectFill"></image>
-        <view class="avatar-badge" wx:if="{{!userInfo.avatar}}">
+        <image class="avatar" src="{{userInfo.avatar_url || '/images/default/avatar.png'}}" mode="aspectFill"></image>
+        <view class="avatar-badge" wx:if="{{!userInfo.avatar_url}}">
           <text class="badge-text">+</text>
         </view>
       </view>

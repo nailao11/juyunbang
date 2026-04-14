@@ -1,3 +1,4 @@
+import json
 import os
 
 from flask import Blueprint, request
@@ -134,19 +135,26 @@ def disclaimer():
 def submit_feedback():
     """提交反馈"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    content = data.get('content', '').strip()
+    content = (data.get('content') or '').strip()
     contact = data.get('contact', '')
     feedback_type = data.get('type', 'suggestion')
+
+    raw_images = data.get('images') or []
+    if isinstance(raw_images, list):
+        image_urls = [str(u) for u in raw_images if u]
+    else:
+        image_urls = []
+    images_json = json.dumps(image_urls, ensure_ascii=False) if image_urls else None
 
     if not content:
         return success(message='反馈内容不能为空')
 
     insert(
-        "INSERT INTO feedback (user_id, content, contact, type) "
-        "VALUES (%s, %s, %s, %s)",
-        (user_id, content, contact, feedback_type)
+        "INSERT INTO feedback (user_id, content, contact, type, images) "
+        "VALUES (%s, %s, %s, %s, %s)",
+        (user_id, content, contact, feedback_type, images_json)
     )
 
     return success(message='感谢您的反馈！')

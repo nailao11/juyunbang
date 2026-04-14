@@ -351,6 +351,12 @@ CREATE TABLE IF NOT EXISTS feedback (
   content    TEXT NOT NULL COMMENT '反馈内容',
   contact    VARCHAR(200) COMMENT '联系方式',
   type       VARCHAR(50) DEFAULT 'suggestion' COMMENT '类型',
+  images     TEXT COMMENT '截图URL列表（JSON数组）',
   status     ENUM('pending','processing','resolved') DEFAULT 'pending',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='用户反馈表';
+
+-- 若已有 feedback 表但缺少 images 列，补充之（MySQL 8+ 使用 IF NOT EXISTS）
+-- 低版本 MySQL 可忽略此语句失败；重建数据库时由上方 CREATE 语句直接生效。
+ALTER TABLE feedback
+  ADD COLUMN IF NOT EXISTS images TEXT COMMENT '截图URL列表（JSON数组）' AFTER type;
