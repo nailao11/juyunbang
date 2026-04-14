@@ -202,40 +202,213 @@ def drama_heat_trend(drama_id):
 
 @heat_bp.route('/realtime/compare', methods=['GET'])
 def compare_heat():
-    """多剧实时热度对比（最多4部）"""
+    """两剧综合对比：按 tab（heat/play/social/score）返回指标列表 + 综合评分。
+
+    请求参数：
+      drama_ids: 逗号分隔的剧集ID，最多取前 2 部
+      tab:       heat | play | social | score，默认 heat
+
+    返回结构：
+      {
+        drama_a: {id, title, poster_url},
+        drama_b: {id, title, poster_url},
+        metrics: [{label, type, raw_a, raw_b, unit}],
+        score_a: int,
+        score_b: int,
+        summary: str,
+        tab: str
+      }
+    """
     drama_ids = request.args.get('drama_ids', '')
+    tab = request.args.get('tab', 'heat')
+    if tab not in ('heat', 'play', 'social', 'score'):
+        tab = 'heat'
+
     if not drama_ids:
         return error('请指定要对比的剧集', 400)
 
-    ids = [int(x) for x in drama_ids.split(',')[:4]]
-    placeholders = ','.join(['%s'] * len(ids))
+    try:
+        ids = [int(x) for x in drama_ids.split(',') if x.strip()][:2]
+    except (TypeError, ValueError):
+        return error('剧集ID格式错误', 400)
 
-    sql = f"""
-        SELECT d.id as drama_id, d.title, p.short_name as platform,
-               hr.heat_value,
-               DATE_FORMAT(hr.record_time, '%%H:%%i') as time_label
-        FROM heat_realtime hr
-        JOIN dramas d ON hr.drama_id = d.id
-        JOIN platforms p ON hr.platform_id = p.id
-        WHERE hr.drama_id IN ({placeholders})
-          AND DATE(hr.record_time) = CURDATE()
-        ORDER BY hr.record_time ASC
-    """
-    items = query(sql, tuple(ids))
+    if len(ids) < 2:
+        return error('至少需要两部剧集才能对比', 400)
 
-    # 按剧集分组
-    compare_data = {}
-    for item in items:
-        did = item['drama_id']
-        if did not in compare_data:
-            compare_data[did] = {
-                'title': item['title'],
-                'trend': {}
-            }
-        plat = item['platform']
-        if plat not in compare_data[did]['trend']:
-            compare_data[did]['trend'][plat] = {'labels': [], 'values': []}
-        compare_data[did]['trend'][plat]['labels'].append(item['time_label'])
-        compare_data[did]['trend'][plat]['values'].append(float(item['heat_value']))
+    dramas = query(
+        "SELECT id, title, poster_url, douban_score, douban_votes "
+        "FROM dramas WHERE id IN (%s, %s)",
+        tuple(ids)
+    )
+    dramas_by_id = {d['id']: d for d in dramas}
+    if len(dramas_by_id) < 2:
+        return error('剧集不存在', 404)
 
-    return success(compare_data)
+    a = dramas_by_id.get(ids[0])
+    b = dramas_by_id.get(ids[1])
+    if not a or not b:
+        return error('剧集不存在', 404)
+
+    metrics = _build_compare_metrics(tab, ids[0], ids[1], a, b)
+
+    # 基于指标原值计算综合得分：每个指标 1 分，A>B 得 A 加分，B>A 得 B 加分，平手各 0.5
+    a_points, b_points = 0.0, 0.0
+    for m in metrics:
+        ra, rb = m.get('raw_a') or 0, m.get('raw_b') or 0
+        try:
+            ra_f, rb_f = float(ra), float(rb)
+        except (TypeError, ValueError):
+            continue
+        if ra_f > rb_f:
+            a_points += 1
+        elif rb_f > ra_f:
+            b_points += 1
+        else:
+            a_points += 0.5
+            b_points += 0.5
+
+    total_points = a_points + b_points
+    if total_points > 0:
+        score_a = int(round(a_points / total_points * 100))
+        score_b = 100 - score_a
+    else:
+        score_a, score_b = 50, 50
+
+    if score_a > score_b:
+        summary = f"在该维度 {a['title']} 略胜一筹"
+    elif score_b > score_a:
+        summary = f"在该维度 {b['title']} 略胜一筹"
+    else:
+        summary = "两部剧在该维度势均力敌"
+
+    return success({
+        'drama_a': {'id': a['id'], 'title': a['title'], 'poster_url': a.get('poster_url')},
+        'drama_b': {'id': b['id'], 'title': b['title'], 'poster_url': b.get('poster_url')},
+        'metrics': metrics,
+        'score_a': score_a,
+        'score_b': score_b,
+        'summary': summary,
+        'tab': tab
+    })
+
+
+def _build_compare_metrics(tab, id_a, id_b, drama_a, drama_b):
+    """按维度构造对比指标列表。"""
+    if tab == 'heat':
+        return _compare_metrics_heat(id_a, id_b)
+    if tab == 'play':
+        return _compare_metrics_play(id_a, id_b)
+    if tab == 'social':
+        return _compare_metrics_social(id_a, id_b)
+    if tab == 'score':
+        return _compare_metrics_score(drama_a, drama_b, id_a, id_b)
+    return []
+
+
+def _latest_heat_stats(drama_id):
+    """取某剧最近30分钟的实时热度：平均值/峰值/平台数。"""
+    row = query_one(
+        "SELECT AVG(heat_value) as avg_heat, MAX(heat_value) as max_heat, "
+        "COUNT(DISTINCT platform_id) as plat_count, MIN(heat_rank) as best_rank "
+        "FROM heat_realtime "
+        "WHERE drama_id = %s "
+        "AND record_time >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
+        (drama_id,)
+    )
+    return row or {}
+
+
+def _compare_metrics_heat(id_a, id_b):
+    a = _latest_heat_stats(id_a)
+    b = _latest_heat_stats(id_b)
+    return [
+        {'label': '平均热度', 'type': 'heat',
+         'raw_a': float(a.get('avg_heat') or 0), 'raw_b': float(b.get('avg_heat') or 0)},
+        {'label': '峰值热度', 'type': 'heat',
+         'raw_a': float(a.get('max_heat') or 0), 'raw_b': float(b.get('max_heat') or 0)},
+        {'label': '覆盖平台', 'type': 'number',
+         'raw_a': int(a.get('plat_count') or 0), 'raw_b': int(b.get('plat_count') or 0)},
+    ]
+
+
+def _latest_play_stats(drama_id):
+    row = query_one(
+        "SELECT SUM(daily_increment) as daily_play, "
+        "MAX(total_accumulated) as total_play, "
+        "MAX(avg_per_episode) as avg_play, stat_date "
+        "FROM playcount_daily WHERE drama_id = %s "
+        "GROUP BY stat_date ORDER BY stat_date DESC LIMIT 1",
+        (drama_id,)
+    )
+    return row or {}
+
+
+def _compare_metrics_play(id_a, id_b):
+    a = _latest_play_stats(id_a)
+    b = _latest_play_stats(id_b)
+    return [
+        {'label': '累计播放', 'type': 'number',
+         'raw_a': int(a.get('total_play') or 0), 'raw_b': int(b.get('total_play') or 0)},
+        {'label': '日增播放', 'type': 'number',
+         'raw_a': int(a.get('daily_play') or 0), 'raw_b': int(b.get('daily_play') or 0)},
+        {'label': '单集均播', 'type': 'number',
+         'raw_a': int(a.get('avg_play') or 0), 'raw_b': int(b.get('avg_play') or 0)},
+    ]
+
+
+def _latest_social_stats(drama_id):
+    row = query_one(
+        "SELECT weibo_topic_read_incr, douyin_topic_views_incr, baidu_index, "
+        "weibo_hot_search_count "
+        "FROM social_daily WHERE drama_id = %s "
+        "ORDER BY stat_date DESC LIMIT 1",
+        (drama_id,)
+    )
+    return row or {}
+
+
+def _compare_metrics_social(id_a, id_b):
+    a = _latest_social_stats(id_a)
+    b = _latest_social_stats(id_b)
+    return [
+        {'label': '微博话题阅读', 'type': 'number',
+         'raw_a': int(a.get('weibo_topic_read_incr') or 0),
+         'raw_b': int(b.get('weibo_topic_read_incr') or 0)},
+        {'label': '抖音相关播放', 'type': 'number',
+         'raw_a': int(a.get('douyin_topic_views_incr') or 0),
+         'raw_b': int(b.get('douyin_topic_views_incr') or 0)},
+        {'label': '百度搜索指数', 'type': 'number',
+         'raw_a': int(a.get('baidu_index') or 0),
+         'raw_b': int(b.get('baidu_index') or 0)},
+        {'label': '微博热搜次数', 'type': 'number',
+         'raw_a': int(a.get('weibo_hot_search_count') or 0),
+         'raw_b': int(b.get('weibo_hot_search_count') or 0)},
+    ]
+
+
+def _latest_index_row(drama_id):
+    row = query_one(
+        "SELECT index_total, index_reputation FROM drama_index_daily "
+        "WHERE drama_id = %s ORDER BY stat_date DESC LIMIT 1",
+        (drama_id,)
+    )
+    return row or {}
+
+
+def _compare_metrics_score(drama_a, drama_b, id_a, id_b):
+    idx_a = _latest_index_row(id_a)
+    idx_b = _latest_index_row(id_b)
+    return [
+        {'label': '豆瓣评分', 'type': 'score',
+         'raw_a': float(drama_a.get('douban_score') or 0),
+         'raw_b': float(drama_b.get('douban_score') or 0)},
+        {'label': '豆瓣人数', 'type': 'number',
+         'raw_a': int(drama_a.get('douban_votes') or 0),
+         'raw_b': int(drama_b.get('douban_votes') or 0)},
+        {'label': '口碑指数', 'type': 'score',
+         'raw_a': float(idx_a.get('index_reputation') or 0),
+         'raw_b': float(idx_b.get('index_reputation') or 0)},
+        {'label': '综合剧力指数', 'type': 'score',
+         'raw_a': float(idx_a.get('index_total') or 0),
+         'raw_b': float(idx_b.get('index_total') or 0)},
+    ]

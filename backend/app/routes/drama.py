@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, request
 
 from ..utils.db import query, query_one
@@ -5,6 +7,52 @@ from ..utils.cache import cache_get, cache_set
 from ..utils.response import success, error
 
 drama_bp = Blueprint('drama', __name__)
+
+
+def _parse_cast_list(cast_main_raw):
+    """解析 cast_main 字段为 [{name, role, avatar}] 列表。
+
+    兼容多种历史格式：
+    - JSON 数组：["赵丽颖", "林更新"]
+    - JSON 对象数组：[{"name": "赵丽颖", "role": "沈璃"}]
+    - 逗号分隔字符串：'赵丽颖,林更新'
+    """
+    if not cast_main_raw:
+        return []
+
+    cast = None
+    if isinstance(cast_main_raw, (list, tuple)):
+        cast = list(cast_main_raw)
+    else:
+        text = str(cast_main_raw).strip()
+        if not text:
+            return []
+        if text.startswith('[') or text.startswith('{'):
+            try:
+                cast = json.loads(text)
+            except (ValueError, TypeError):
+                cast = None
+        if cast is None:
+            # 回退：按 , / 、 等分隔符切分
+            cast = [s.strip() for s in text.replace('，', ',').replace('、', ',').split(',') if s.strip()]
+
+    if not isinstance(cast, list):
+        return []
+
+    result = []
+    for item in cast:
+        if isinstance(item, dict):
+            name = item.get('name') or item.get('actor') or ''
+            if not name:
+                continue
+            result.append({
+                'name': name,
+                'role': item.get('role') or item.get('character') or '',
+                'avatar': item.get('avatar') or ''
+            })
+        elif item:
+            result.append({'name': str(item), 'role': '', 'avatar': ''})
+    return result
 
 
 @drama_bp.route('/<int:drama_id>', methods=['GET'])
@@ -20,6 +68,16 @@ def drama_detail(drama_id):
     )
     if not drama:
         return error('剧集不存在', 404)
+
+    # 解析主演 JSON 为结构化 cast_list，供前端直接渲染
+    drama['cast_list'] = _parse_cast_list(drama.get('cast_main'))
+
+    # 解析题材为数组（前端标签渲染使用）
+    genre_str = drama.get('genre') or ''
+    if genre_str:
+        drama['genres'] = [g.strip() for g in genre_str.replace('，', ',').replace('、', ',').replace('/', ',').split(',') if g.strip()]
+    else:
+        drama['genres'] = []
 
     # 获取播出平台
     platforms = query(

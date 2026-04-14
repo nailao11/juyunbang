@@ -9,7 +9,6 @@ Page({
     currentType: '',
     loading: true,
     updateTime: '',
-    maxHeat: 10000,
     darkMode: false,
     hasMore: false
   },
@@ -72,21 +71,25 @@ Page({
 
       let list = data.list || data || []
 
-      // 格式化数据
+      // 格式化数据 — 全平台聚合榜返回 avg_heat，单平台榜返回 heat_value
+      const getHeat = (i) => Number(i.heat_value || i.avg_heat || 0)
       const maxHeat = list.length > 0
-        ? Math.max(...list.map(i => Number(i.heat_value || i.avg_heat || 0)))
+        ? Math.max(...list.map(getHeat))
         : 10000
 
-      list = list.map(item => ({
-        ...item,
-        heat_display: formatHeat(item.heat_value || item.avg_heat),
-        heat_change_pct: item.heat_change_pct ? Math.abs(item.heat_change_pct).toFixed(1) : '',
-        trend: item.trend || 'flat'
-      }))
+      list = list.map(item => {
+        const heat = getHeat(item)
+        return {
+          ...item,
+          heat_display: formatHeat(heat),
+          heat_bar_width: maxHeat > 0 ? Math.round(heat / maxHeat * 100) : 0,
+          heat_change_pct: item.heat_change_pct ? Math.abs(item.heat_change_pct).toFixed(1) : '',
+          trend: item.trend || 'flat'
+        }
+      })
 
       this.setData({
         rankList: list,
-        maxHeat,
         loading: false,
         hasMore: false,
         updateTime: data.update_time ? formatTime(data.update_time) : this._getCurrentTime()

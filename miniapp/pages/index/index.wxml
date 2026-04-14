@@ -77,7 +77,7 @@
         </view>
         <!-- 热度条 -->
         <view class="heat-bar">
-          <view class="heat-bar-fill" style="width: {{item.heat_value / maxHeat * 100}}%"></view>
+          <view class="heat-bar-fill" style="width: {{item.heat_bar_width}}%"></view>
         </view>
       </view>
 

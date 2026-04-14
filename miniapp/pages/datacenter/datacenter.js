@@ -3,14 +3,37 @@ const { formatNumber, formatHeat, formatChange, formatFullDate, getWeekDay } = r
 
 const app = getApp()
 
-const TAB_MAP = {
-  play: { api: '/daily/play-rank', label: '播放量' },
-  heat: { api: '/daily/heat-rank', label: '热度' },
-  power: { api: '/daily/index-rank', label: '剧力指数' },
-  discuss: { api: '/daily/social-rank', label: '讨论度' }
+// 主Tab元数据（用于下划线定位与默认展示）
+const TAB_INDEX = { play: 0, heat: 1, power: 2, discuss: 3 }
+
+// 各 (tab, period) 组合对应的后端接口、读值字段与格式化方式
+// formatter: 'number' | 'heat' | 'score'
+const ENDPOINT_MAP = {
+  'play-daily':     { url: '/daily/play-rank',           valueField: 'total_daily_play', formatter: 'number' },
+  'play-weekly':    { url: '/weekly/play-rank',          valueField: 'weekly_play',      formatter: 'number' },
+  'play-monthly':   { url: '/weekly/monthly/play-rank',  valueField: 'monthly_play',     formatter: 'number' },
+
+  'heat-daily':     { url: '/daily/heat-rank',           valueField: 'heat_avg',         formatter: 'heat' },
+  'heat-weekly':    { url: '/weekly/heat-rank',          valueField: 'heat_avg',         formatter: 'heat' },
+  'heat-monthly':   { url: '/weekly/monthly/heat-rank',  valueField: 'heat_avg',         formatter: 'heat' },
+
+  'power-daily':    { url: '/daily/index-rank',          valueField: 'index_total',      formatter: 'score' },
+  'power-weekly':   { url: '/weekly/index-rank',         valueField: 'avg_index',        formatter: 'score' },
+  'power-monthly':  { url: '/weekly/monthly/index-rank', valueField: 'avg_index',        formatter: 'score' },
+
+  'discuss-daily':  { url: '/daily/social-rank',         valueField: 'social_score',     formatter: 'number' },
+  'discuss-weekly': { url: '/weekly/social-rank',        valueField: 'social_score',     formatter: 'number' },
+  'discuss-monthly':{ url: '/weekly/monthly/social-rank',valueField: 'social_score',     formatter: 'number' }
 }
 
-const TAB_INDEX = { play: 0, heat: 1, power: 2, discuss: 3 }
+// 将 YYYY-MM-DD 转为所在周的周一 YYYY-MM-DD
+function getMondayOf(dateStr) {
+  const d = new Date(dateStr)
+  const day = d.getDay() // 0=周日, 1=周一, ..., 6=周六
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return formatFullDate(d)
+}
 
 Page({
   data: {
@@ -68,38 +91,63 @@ Page({
     }
   },
 
+  // 构造给后端的日期参数（根据 period 选择 date/week_start/month）
+  _buildDateParams() {
+    const { periodTab, currentDate } = this.data
+    if (periodTab === 'weekly') {
+      return { week_start: getMondayOf(currentDate) }
+    }
+    if (periodTab === 'monthly') {
+      return { month: currentDate.slice(0, 7) }
+    }
+    return { date: currentDate }
+  },
+
   // 加载排行数据
   async loadRankData(append = false) {
     if (!append) this.setData({ loading: true })
 
     try {
-      const { mainTab, periodTab, typeFilter, currentDate, page } = this.data
-      const config = TAB_MAP[mainTab]
+      const { mainTab, periodTab, typeFilter, page } = this.data
+      const key = `${mainTab}-${periodTab}`
+      const config = ENDPOINT_MAP[key]
+
+      if (!config) {
+        console.error('未配置的组合', key)
+        this.setData({ loading: false, rankList: [], hasMore: false })
+        return
+      }
 
       const params = {
-        date: currentDate,
-        period: periodTab,
+        ...this._buildDateParams(),
         type: typeFilter,
         page,
         limit: 30
       }
 
-      const data = await api.get(config.api, params)
+      const data = await api.get(config.url, params)
       let list = data.list || data || []
 
-      const maxVal = list.length > 0
-        ? Math.max(...list.map(i => Number(i.value || i.play_count || i.heat_value || 0)))
-        : 1
+      // 提取每项的数值，统一用于排序、格式化、进度条
+      const getVal = (item) => {
+        const v = item[config.valueField]
+        return v !== null && v !== undefined ? Number(v) || 0 : 0
+      }
 
-      list = list.map((item, idx) => ({
-        ...item,
-        value_display: this._formatValue(item, mainTab),
-        change_display: item.change_pct ? formatChange(item.change_pct) : '',
-        trend: item.trend || 'flat',
-        bar_width: Math.round((Number(item.value || item.play_count || item.heat_value || 0) / maxVal) * 100),
-        is_new: item.is_new || false,
-        rank_change: item.rank_change
-      }))
+      const maxVal = list.length > 0 ? Math.max(...list.map(getVal), 1) : 1
+
+      list = list.map((item) => {
+        const val = getVal(item)
+        return {
+          ...item,
+          value_display: this._formatValue(val, config.formatter),
+          change_display: item.change_pct ? formatChange(item.change_pct) : '',
+          trend: item.trend || 'flat',
+          bar_width: Math.max(0, Math.min(100, Math.round((val / maxVal) * 100))),
+          is_new: item.is_new || false,
+          rank_change: item.rank_change
+        }
+      })
 
       const newList = append ? [...this.data.rankList, ...list] : list
 
@@ -117,12 +165,10 @@ Page({
     }
   },
 
-  _formatValue(item, tab) {
-    const val = item.value || item.play_count || item.heat_value || 0
-    if (tab === 'play') return formatNumber(val)
-    if (tab === 'heat') return formatHeat(val)
-    if (tab === 'power') return val.toFixed ? val.toFixed(1) : val
-    if (tab === 'discuss') return formatNumber(val)
+  _formatValue(val, formatter) {
+    if (val === null || val === undefined || isNaN(val)) return '-'
+    if (formatter === 'heat') return formatHeat(val)
+    if (formatter === 'score') return Number(val).toFixed(1)
     return formatNumber(val)
   },
 

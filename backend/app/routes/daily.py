@@ -208,6 +208,7 @@ def daily_index_rank():
 def daily_social_rank():
     """日讨论度排行榜"""
     date = request.args.get('date', '')
+    drama_type = request.args.get('type', '')
     limit = min(int(request.args.get('limit', 30)), 100)
 
     if not date:
@@ -218,21 +219,34 @@ def daily_social_rank():
         if not date:
             return success({'list': [], 'date': None})
 
-    sql = """
-        SELECT d.id, d.title, d.poster_url, d.douban_score,
+    where_extra = ""
+    params = [date]
+    if drama_type:
+        where_extra = "AND d.type = %s"
+        params.append(drama_type)
+
+    sql = f"""
+        SELECT d.id, d.title, d.type, d.poster_url, d.douban_score,
                sd.weibo_topic_read_incr, sd.weibo_topic_discuss_incr,
                sd.weibo_hot_search_count,
                sd.douyin_topic_views_incr, sd.baidu_index, sd.wechat_index,
-               sd.stat_date
+               sd.stat_date,
+               (COALESCE(sd.weibo_topic_read_incr, 0) +
+                COALESCE(sd.douyin_topic_views_incr, 0) * 10 +
+                COALESCE(sd.baidu_index, 0) * 10000) as social_score
         FROM social_daily sd
         JOIN dramas d ON sd.drama_id = d.id
         WHERE sd.stat_date = %s
-        ORDER BY (COALESCE(sd.weibo_topic_read_incr, 0) +
-                  COALESCE(sd.douyin_topic_views_incr, 0) * 10 +
-                  COALESCE(sd.baidu_index, 0) * 10000) DESC
+        {where_extra}
+        ORDER BY social_score DESC
         LIMIT %s
     """
-    items = query(sql, (date, limit))
+    params.append(limit)
+    items = query(sql, tuple(params))
+
+    for item in items:
+        if item.get('social_score') is not None:
+            item['social_score'] = int(item['social_score'])
 
     return success({'list': items, 'date': date})
 
