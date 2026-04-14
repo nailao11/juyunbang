@@ -9,13 +9,13 @@
       </view>
       <text class="app-name">剧云榜</text>
       <text class="app-version">版本 1.0.0</text>
-      <text class="app-slogan">全平台追剧数据助手</text>
+      <text class="app-slogan">全平台剧集热度数据助手</text>
     </view>
 
     <!-- 简介 -->
     <view class="card about-card">
       <text class="about-desc">
-        剧云榜是一款专注于剧集数据追踪与分析的工具，整合全平台播放量、热度、口碑等多维数据，为追剧爱好者提供专业、全面的数据参考。
+        剧云榜是一款专注于剧集数据追踪与分析的工具，整合全平台播放量、热度、口碑等多维数据，为剧集爱好者提供专业、全面的数据参考。
       </text>
     </view>
 
@@ -27,7 +27,7 @@
           <text class="feature-icon">📊</text>
           <view class="feature-info">
             <text class="feature-name">实时热度监控</text>
-            <text class="feature-desc">全平台热度数据实时更新</text>
+            <text class="feature-desc">全平台热度数据每 15 分钟更新</text>
           </view>
         </view>
         <view class="feature-item">
@@ -40,8 +40,8 @@
         <view class="feature-item">
           <text class="feature-icon">🎯</text>
           <view class="feature-info">
-            <text class="feature-name">智能追剧</text>
-            <text class="feature-desc">追剧清单、笔记、报告一站式管理</text>
+            <text class="feature-name">剧力指数</text>
+            <text class="feature-desc">四维度加权自研综合评分（0-100）</text>
           </view>
         </view>
         <view class="feature-item">
@@ -66,9 +66,9 @@
         <text class="link-arrow">›</text>
       </view>
       <view class="about-divider"></view>
-      <view class="about-link" bindtap="copyContact">
+      <view class="about-link" bindtap="navigateTo" data-url="/pages/feedback/feedback">
         <text class="link-text">联系我们</text>
-        <text class="link-value">juyunbang@example.com</text>
+        <text class="link-value">通过"意见反馈"联系</text>
       </view>
     </view>
 

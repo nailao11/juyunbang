@@ -132,7 +132,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 - 全平台追剧数据助手',
+      title: '剧云榜 — 全平台剧集热度数据助手',
       path: '/pages/index/index'
     }
   }

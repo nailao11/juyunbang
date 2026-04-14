@@ -6,7 +6,7 @@
     <view class="card settings-card">
       <view class="settings-group-title">通知设置</view>
       <view class="settings-item">
-        <text class="settings-label">追剧更新提醒</text>
+        <text class="settings-label">剧集更新提醒</text>
         <switch checked="{{notifyUpdate}}" bindchange="toggleNotifyUpdate" color="#667eea" />
       </view>
       <view class="settings-divider"></view>
