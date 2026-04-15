@@ -85,21 +85,13 @@ def job_detect_anomalies():
 
 
 def job_daily_publish():
-    """每日15:00：发布日度数据并生成日报"""
+    """每日15:00：发布日度数据"""
     logger.info("=== 开始发布日度数据 ===")
     try:
         from processors.daily_calculator import publish_daily_data
         publish_daily_data()
     except Exception as e:
         logger.error(f"日度数据发布异常: {e}")
-
-    logger.info("=== 开始生成每日简报 ===")
-    try:
-        from processors.report_generator import ReportGenerator
-        generator = ReportGenerator()
-        generator.run()
-    except Exception as e:
-        logger.error(f"日报生成异常: {e}")
 
 
 def job_crawl_douban():
@@ -176,12 +168,12 @@ def main():
         name='热度异动检测'
     )
 
-    # 每日15:00：发布日度数据 + 生成日报
+    # 每日15:00：发布日度数据
     scheduler.add_job(
         job_daily_publish,
         CronTrigger(hour=15, minute=0),
         id='daily_publish',
-        name='日度数据发布与日报生成'
+        name='日度数据发布'
     )
 
     # 每日03:00：豆瓣评分更新

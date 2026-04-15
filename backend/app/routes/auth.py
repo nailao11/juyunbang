@@ -82,24 +82,6 @@ def get_profile():
     if not user:
         return error('用户不存在', 404)
 
-    # 获取追剧统计
-    stats = query_one(
-        "SELECT "
-        "COUNT(CASE WHEN status='watching' THEN 1 END) as watching_count, "
-        "COUNT(CASE WHEN status='want_to_watch' THEN 1 END) as want_count, "
-        "COUNT(CASE WHEN status='watched' THEN 1 END) as watched_count, "
-        "COUNT(CASE WHEN status='dropped' THEN 1 END) as dropped_count "
-        "FROM user_tracking WHERE user_id = %s",
-        (user_id,)
-    )
-
-    user['stats'] = stats or {
-        'watching_count': 0,
-        'want_count': 0,
-        'watched_count': 0,
-        'dropped_count': 0
-    }
-
     return success(user)
 
 
