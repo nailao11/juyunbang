@@ -64,13 +64,18 @@ Page({
     wx.getUserProfile({
       desc: '用于完善个人资料',
       success: (res) => {
-        const userInfo = res.userInfo
+        const wxInfo = res.userInfo
+        const userInfo = {
+          ...this.data.userInfo,
+          nickname: wxInfo.nickName,
+          avatar_url: wxInfo.avatarUrl
+        }
         this.setData({ userInfo })
         wx.setStorageSync('userInfo', userInfo)
         // 同步到服务器
         api.post('/auth/profile', {
-          nickname: userInfo.nickName,
-          avatar: userInfo.avatarUrl
+          nickname: wxInfo.nickName,
+          avatar_url: wxInfo.avatarUrl
         }).catch(() => {})
       },
       fail: () => {
@@ -87,7 +92,7 @@ Page({
       sizeType: ['compressed'],
       success: (res) => {
         const tempPath = res.tempFiles[0].tempFilePath
-        this.setData({ 'userInfo.avatar': tempPath })
+        this.setData({ 'userInfo.avatar_url': tempPath })
         // 上传头像
         wx.uploadFile({
           url: app.globalData.baseUrl + '/auth/avatar',
@@ -96,7 +101,14 @@ Page({
           header: {
             'Authorization': 'Bearer ' + (app.globalData.token || '')
           },
-          success: () => {
+          success: (uploadRes) => {
+            try {
+              const resp = JSON.parse(uploadRes.data)
+              const newUrl = resp && resp.data && resp.data.url
+              if (newUrl) {
+                this.setData({ 'userInfo.avatar_url': newUrl })
+              }
+            } catch (e) {}
             wx.showToast({ title: '头像已更新', icon: 'success' })
           }
         })
@@ -120,7 +132,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 - 全平台追剧数据助手',
+      title: '剧云榜 — 全平台剧集热度数据助手',
       path: '/pages/index/index'
     }
   }

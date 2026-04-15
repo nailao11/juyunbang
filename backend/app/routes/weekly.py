@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success
 
 weekly_bp = Blueprint('weekly', __name__)
@@ -12,7 +13,7 @@ def weekly_play_rank():
     """周播放量排行榜"""
     week_start = request.args.get('week_start', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not week_start:
         latest = query_one(
@@ -65,7 +66,7 @@ def weekly_play_rank():
 def weekly_index_rank():
     """周剧力指数排行榜"""
     week_start = request.args.get('week_start', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not week_start:
         latest = query_one(
@@ -107,7 +108,7 @@ def weekly_heat_rank():
     """周热度排行榜：按 heat_daily 聚合一周平均热度。"""
     week_start = request.args.get('week_start', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not week_start:
         latest = query_one(
@@ -165,7 +166,7 @@ def weekly_social_rank():
     """周讨论度排行榜：聚合一周微博/抖音/百度等数据。"""
     week_start = request.args.get('week_start', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not week_start:
         latest = query_one(
@@ -220,7 +221,7 @@ def monthly_play_rank():
     """月播放量排行榜"""
     month = request.args.get('month', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not month:
         latest = query_one(
@@ -264,7 +265,7 @@ def monthly_heat_rank():
     """月热度排行榜：heat_daily 按月聚合。"""
     month = request.args.get('month', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not month:
         latest = query_one(
@@ -313,7 +314,7 @@ def monthly_index_rank():
     """月剧力指数排行榜。"""
     month = request.args.get('month', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not month:
         latest = query_one(
@@ -363,7 +364,7 @@ def monthly_social_rank():
     """月讨论度排行榜。"""
     month = request.args.get('month', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not month:
         latest = query_one(

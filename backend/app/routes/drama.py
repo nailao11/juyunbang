@@ -4,6 +4,7 @@ from flask import Blueprint, request
 
 from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success, error
 
 drama_bp = Blueprint('drama', __name__)
@@ -79,6 +80,19 @@ def drama_detail(drama_id):
     else:
         drama['genres'] = []
 
+    # 从 air_date 推导出年份（供前端 drama-detail 页渲染使用）
+    air_date = drama.get('air_date')
+    year = None
+    if air_date is not None:
+        if hasattr(air_date, 'year'):
+            year = air_date.year
+        else:
+            try:
+                year = int(str(air_date)[:4])
+            except (ValueError, TypeError):
+                year = None
+    drama['year'] = year
+
     # 获取播出平台
     platforms = query(
         "SELECT p.name, p.short_name, p.color, dp.is_exclusive, dp.platform_url "
@@ -147,7 +161,7 @@ def drama_episodes(drama_id):
 @drama_bp.route('/<int:drama_id>/heat-history', methods=['GET'])
 def drama_heat_history(drama_id):
     """获取热度历史趋势"""
-    days = min(int(request.args.get('days', 30)), 90)
+    days = get_int_arg('days', 30, min_val=1, max_val=90)
 
     sql = """
         SELECT p.short_name as platform, hd.stat_date,
@@ -177,7 +191,7 @@ def drama_heat_history(drama_id):
 @drama_bp.route('/<int:drama_id>/play-history', methods=['GET'])
 def drama_play_history(drama_id):
     """获取播放量历史趋势"""
-    days = min(int(request.args.get('days', 30)), 90)
+    days = get_int_arg('days', 30, min_val=1, max_val=90)
 
     sql = """
         SELECT pd.stat_date,
@@ -205,7 +219,7 @@ def drama_play_history(drama_id):
 @drama_bp.route('/<int:drama_id>/social-history', methods=['GET'])
 def drama_social_history(drama_id):
     """获取社交数据历史趋势"""
-    days = min(int(request.args.get('days', 30)), 90)
+    days = get_int_arg('days', 30, min_val=1, max_val=90)
 
     sql = """
         SELECT stat_date, weibo_topic_read_incr, weibo_topic_discuss_incr,
@@ -223,7 +237,7 @@ def drama_social_history(drama_id):
 @drama_bp.route('/<int:drama_id>/index-history', methods=['GET'])
 def drama_index_history(drama_id):
     """获取剧力指数历史趋势"""
-    days = min(int(request.args.get('days', 30)), 90)
+    days = get_int_arg('days', 30, min_val=1, max_val=90)
 
     sql = """
         SELECT stat_date, index_total, index_heat, index_social,

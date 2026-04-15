@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from ..utils.db import query, query_one, execute
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success
 
 search_bp = Blueprint('search', __name__)
@@ -12,8 +13,8 @@ def search():
     """全局搜索"""
     keyword = request.args.get('keyword', '').strip()
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not keyword:
@@ -61,23 +62,34 @@ def search():
 
 @search_bp.route('/hot', methods=['GET'])
 def search_hot():
-    """搜索热词"""
+    """搜索热词（按在播剧的最新平台热度排序）"""
     cache_key = "search:hot"
     cached = cache_get(cache_key)
     if cached:
         return success(cached)
 
-    # 取在播剧中热度最高的作为热词
-    items = query(
-        "SELECT d.title FROM dramas d "
+    # 取在播剧中平台热度最高的作为热词
+    rows = query(
+        "SELECT d.id, d.title, "
+        "       (SELECT MAX(hr.heat_value) FROM heat_realtime hr "
+        "        WHERE hr.drama_id = d.id "
+        "        AND hr.record_time > DATE_SUB(NOW(), INTERVAL 1 DAY)) AS heat_value "
+        "FROM dramas d "
         "WHERE d.status = 'airing' "
-        "ORDER BY d.douban_score DESC "
+        "ORDER BY heat_value DESC, d.douban_score DESC "
         "LIMIT 10"
     )
-    hot_words = [item['title'] for item in items]
+    hot_list = [
+        {
+            'drama_id': r['id'],
+            'keyword': r['title'],
+            'heat_value': float(r['heat_value']) if r.get('heat_value') is not None else None,
+        }
+        for r in rows
+    ]
 
-    cache_set(cache_key, hot_words, expire=3600)
-    return success(hot_words)
+    cache_set(cache_key, hot_list, expire=3600)
+    return success(hot_list)
 
 
 @search_bp.route('/suggest', methods=['GET'])
@@ -141,8 +153,8 @@ def upcoming():
 def by_genre():
     """按类型浏览"""
     genre = request.args.get('genre', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not genre:
@@ -175,8 +187,8 @@ def by_genre():
 def by_year():
     """按年份浏览"""
     year = request.args.get('year', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not year:

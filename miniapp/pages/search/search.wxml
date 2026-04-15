@@ -58,9 +58,8 @@
           <text class="hot-rank {{index < 3 ? 'hot-top' : ''}}">{{index + 1}}</text>
           <view class="hot-info flex-1">
             <text class="hot-keyword">{{item.keyword}}</text>
-            <text class="hot-badge" wx:if="{{item.badge}}">{{item.badge}}</text>
           </view>
-          <text class="hot-count">{{item.search_count || ''}}</text>
+          <text class="hot-count" wx:if="{{item.heat_display}}">热度 {{item.heat_display}}</text>
         </view>
       </view>
     </view>

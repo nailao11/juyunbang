@@ -32,9 +32,6 @@ def create_app():
     from .routes.weekly import weekly_bp
     from .routes.drama import drama_bp
     from .routes.search import search_bp
-    from .routes.tracking import tracking_bp
-    from .routes.notes import notes_bp
-    from .routes.news import news_bp
     from .routes.system import system_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
@@ -43,9 +40,6 @@ def create_app():
     app.register_blueprint(weekly_bp, url_prefix='/api/v1/weekly')
     app.register_blueprint(drama_bp, url_prefix='/api/v1/drama')
     app.register_blueprint(search_bp, url_prefix='/api/v1/search')
-    app.register_blueprint(tracking_bp, url_prefix='/api/v1/tracking')
-    app.register_blueprint(notes_bp, url_prefix='/api/v1/notes')
-    app.register_blueprint(news_bp, url_prefix='/api/v1/news')
     app.register_blueprint(system_bp, url_prefix='/api/v1/system')
 
     # 健康检查

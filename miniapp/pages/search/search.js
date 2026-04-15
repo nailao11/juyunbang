@@ -52,7 +52,19 @@ Page({
   async loadHotSearch() {
     try {
       const data = await api.get('/search/hot')
-      this.setData({ hotList: data.list || data || [] })
+      const raw = Array.isArray(data) ? data : (data && data.list) || []
+      const hotList = raw.map(item => {
+        // 兼容后端返回对象 {keyword, heat_value, drama_id} 或字符串
+        if (typeof item === 'string') {
+          return { keyword: item, heat_display: '' }
+        }
+        return {
+          drama_id: item.drama_id,
+          keyword: item.keyword || item.title || '',
+          heat_display: item.heat_value ? formatHeat(item.heat_value) : ''
+        }
+      }).filter(x => x.keyword)
+      this.setData({ hotList })
     } catch (e) {
       console.error('加载热搜失败', e)
     }

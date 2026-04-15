@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success, error
 
 daily_bp = Blueprint('daily', __name__)
@@ -13,8 +14,8 @@ def daily_heat_rank():
     date = request.args.get('date', '')
     drama_type = request.args.get('type', '')
     platform = request.args.get('platform', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     cache_key = f"daily:heat:{date}:{drama_type}:{platform}:{page}:{limit}"
@@ -85,8 +86,8 @@ def daily_play_rank():
     """日播放量排行榜"""
     date = request.args.get('date', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not date:
@@ -125,19 +126,39 @@ def daily_play_rank():
         ORDER BY total_daily_play DESC
         LIMIT %s OFFSET %s
     """
-    params.extend([limit, offset])
-    items = query(sql, tuple(params))
+    query_params = params + [limit, offset]
+    items = query(sql, tuple(query_params))
 
-    # 获取前一天数据计算涨跌
-    for item in items:
-        prev = query_one(
-            "SELECT SUM(daily_increment) as prev_play FROM playcount_daily "
-            "WHERE drama_id = %s AND stat_date = DATE_SUB(%s, INTERVAL 1 DAY)",
-            (item['id'], date)
+    # 总数（用于前端分页）
+    count_sql = f"""
+        SELECT COUNT(DISTINCT pd.drama_id) as total
+        FROM playcount_daily pd
+        JOIN dramas d ON pd.drama_id = d.id
+        WHERE {where_sql}
+    """
+    total_row = query_one(count_sql, tuple(params))
+    total_count = total_row['total'] if total_row else 0
+
+    # 一次性取出本页所有剧集前一天的播放数据，避免 N+1 查询
+    drama_ids = [item['id'] for item in items]
+    prev_map = {}
+    if drama_ids:
+        placeholders = ','.join(['%s'] * len(drama_ids))
+        prev_rows = query(
+            f"SELECT drama_id, SUM(daily_increment) as prev_play "
+            f"FROM playcount_daily "
+            f"WHERE stat_date = DATE_SUB(%s, INTERVAL 1 DAY) "
+            f"  AND drama_id IN ({placeholders}) "
+            f"GROUP BY drama_id",
+            tuple([date] + drama_ids)
         )
-        if prev and prev['prev_play'] and item['total_daily_play']:
-            change = int(item['total_daily_play']) - int(prev['prev_play'])
-            pct = round(change / int(prev['prev_play']) * 100, 1) if prev['prev_play'] > 0 else 0
+        prev_map = {r['drama_id']: r['prev_play'] for r in prev_rows}
+
+    for item in items:
+        prev_play = prev_map.get(item['id'])
+        if prev_play and item['total_daily_play']:
+            change = int(item['total_daily_play']) - int(prev_play)
+            pct = round(change / int(prev_play) * 100, 1) if int(prev_play) > 0 else 0
             item['play_change'] = change
             item['play_change_pct'] = pct
         else:
@@ -146,7 +167,7 @@ def daily_play_rank():
 
     result = {
         'list': items,
-        'total': len(items),
+        'total': total_count,
         'page': page,
         'page_size': limit,
         'date': date
@@ -161,7 +182,7 @@ def daily_index_rank():
     """日剧力指数排行榜"""
     date = request.args.get('date', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not date:
         latest = query_one(
@@ -209,7 +230,7 @@ def daily_social_rank():
     """日讨论度排行榜"""
     date = request.args.get('date', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
 
     if not date:
         latest = query_one(

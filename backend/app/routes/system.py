@@ -1,3 +1,4 @@
+import json
 import os
 
 from flask import Blueprint, request
@@ -5,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..utils.db import query, insert
 from ..utils.cache import cache_get, cache_set
-from ..utils.response import success
+from ..utils.response import success, error
 from ..utils.qiniu_helper import get_upload_token
 
 system_bp = Blueprint('system', __name__)
@@ -54,10 +55,9 @@ def about():
         'version': '1.0.0',
         'description': '全平台剧集实时热度监控与数据分析工具',
         'features': [
-            '实时热度排行 — 聚合各大视频平台热度数据',
+            '实时热度排行 — 聚合爱奇艺/优酷/腾讯视频/芒果TV四大平台热度数据',
             '播放量统计 — 日榜/周榜/月榜全覆盖',
-            '剧力指数 — 独家综合评分体系',
-            '追剧管理 — 记录你的观剧历程',
+            '剧力指数 — 四维度加权自研综合评分体系',
             '数据对比 — 多剧横向对比分析',
             '深色模式 — 护眼夜间浏览'
         ],
@@ -134,19 +134,26 @@ def disclaimer():
 def submit_feedback():
     """提交反馈"""
     user_id = get_jwt_identity()
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    content = data.get('content', '').strip()
+    content = (data.get('content') or '').strip()
     contact = data.get('contact', '')
     feedback_type = data.get('type', 'suggestion')
 
+    raw_images = data.get('images') or []
+    if isinstance(raw_images, list):
+        image_urls = [str(u) for u in raw_images if u]
+    else:
+        image_urls = []
+    images_json = json.dumps(image_urls, ensure_ascii=False) if image_urls else None
+
     if not content:
-        return success(message='反馈内容不能为空')
+        return error('反馈内容不能为空', 400)
 
     insert(
-        "INSERT INTO feedback (user_id, content, contact, type) "
-        "VALUES (%s, %s, %s, %s)",
-        (user_id, content, contact, feedback_type)
+        "INSERT INTO feedback (user_id, content, contact, type, images) "
+        "VALUES (%s, %s, %s, %s, %s)",
+        (user_id, content, contact, feedback_type, images_json)
     )
 
     return success(message='感谢您的反馈！')
@@ -157,18 +164,23 @@ def submit_feedback():
 def upload_image():
     """上传图片"""
     if 'file' not in request.files:
-        return success({'url': ''})
+        return error('未上传文件', 400)
 
     file = request.files['file']
     if not file.filename:
-        return success({'url': ''})
+        return error('文件名为空', 400)
 
     try:
         from ..utils.qiniu_helper import upload_flask_file
         url = upload_flask_file(file, prefix='images')
-        return success({'url': url or ''})
     except Exception as e:
-        return success({'url': ''})
+        from loguru import logger
+        logger.error(f"图片上传失败: {e}")
+        return error('图片上传失败', 500)
+
+    if not url:
+        return error('图片上传失败', 500)
+    return success({'url': url})
 
 
 @system_bp.route('/upload-token', methods=['GET'])

@@ -4,9 +4,6 @@ Page({
   data: {
     darkMode: false,
     themeMode: 'light',
-    notifyUpdate: true,
-    notifyHeat: false,
-    notifyRank: false,
     defaultRankIndex: 0,
     rankOptions: ['热度榜', '播放量榜', '剧力指数榜', '讨论度榜'],
     cacheSize: '计算中...',
@@ -18,9 +15,6 @@ Page({
       themeMode: app.globalData.themeMode || 'light',
       darkMode: app.globalData.themeMode === 'dark',
       isLoggedIn: !!app.globalData.token,
-      notifyUpdate: wx.getStorageSync('notifyUpdate') !== false,
-      notifyHeat: wx.getStorageSync('notifyHeat') === true,
-      notifyRank: wx.getStorageSync('notifyRank') === true,
       defaultRankIndex: wx.getStorageSync('defaultRankIndex') || 0
     })
     this.calculateCache()
@@ -36,24 +30,6 @@ Page({
       darkMode: theme === 'dark'
     })
     wx.showToast({ title: '主题已切换', icon: 'success' })
-  },
-
-  toggleNotifyUpdate(e) {
-    const val = e.detail.value
-    wx.setStorageSync('notifyUpdate', val)
-    this.setData({ notifyUpdate: val })
-  },
-
-  toggleNotifyHeat(e) {
-    const val = e.detail.value
-    wx.setStorageSync('notifyHeat', val)
-    this.setData({ notifyHeat: val })
-  },
-
-  toggleNotifyRank(e) {
-    const val = e.detail.value
-    wx.setStorageSync('notifyRank', val)
-    this.setData({ notifyRank: val })
   },
 
   onDefaultRankChange(e) {

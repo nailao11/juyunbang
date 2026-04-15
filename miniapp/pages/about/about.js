@@ -13,15 +13,6 @@ Page({
     wx.navigateTo({ url: e.currentTarget.dataset.url })
   },
 
-  copyContact() {
-    wx.setClipboardData({
-      data: 'juyunbang@example.com',
-      success: () => {
-        wx.showToast({ title: '邮箱已复制', icon: 'success' })
-      }
-    })
-  },
-
   onShareAppMessage() {
     return {
       title: '剧云榜 — 关于我们',
