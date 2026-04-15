@@ -6,7 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..utils.db import query, insert
 from ..utils.cache import cache_get, cache_set
-from ..utils.response import success
+from ..utils.response import success, error
 from ..utils.qiniu_helper import get_upload_token
 
 system_bp = Blueprint('system', __name__)
@@ -148,7 +148,7 @@ def submit_feedback():
     images_json = json.dumps(image_urls, ensure_ascii=False) if image_urls else None
 
     if not content:
-        return success(message='反馈内容不能为空')
+        return error('反馈内容不能为空', 400)
 
     insert(
         "INSERT INTO feedback (user_id, content, contact, type, images) "
@@ -164,18 +164,23 @@ def submit_feedback():
 def upload_image():
     """上传图片"""
     if 'file' not in request.files:
-        return success({'url': ''})
+        return error('未上传文件', 400)
 
     file = request.files['file']
     if not file.filename:
-        return success({'url': ''})
+        return error('文件名为空', 400)
 
     try:
         from ..utils.qiniu_helper import upload_flask_file
         url = upload_flask_file(file, prefix='images')
-        return success({'url': url or ''})
     except Exception as e:
-        return success({'url': ''})
+        from loguru import logger
+        logger.error(f"图片上传失败: {e}")
+        return error('图片上传失败', 500)
+
+    if not url:
+        return error('图片上传失败', 500)
+    return success({'url': url})
 
 
 @system_bp.route('/upload-token', methods=['GET'])

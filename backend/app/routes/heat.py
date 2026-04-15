@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success, error
 
 heat_bp = Blueprint('heat', __name__)
@@ -13,8 +14,8 @@ def realtime_rank():
     """获取实时热度排行榜（取每个剧+平台的最新一条记录）"""
     platform = request.args.get('platform', '')
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 100)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=100)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     cache_key = f"heat:realtime:rank:{platform}:{drama_type}:{page}:{limit}"
@@ -93,7 +94,7 @@ def realtime_rank():
 def all_platform_rank():
     """全平台聚合热度排行 — 最新在播剧，最多30条"""
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 30)), 30)
+    limit = get_int_arg('limit', 30, min_val=1, max_val=30)
 
     cache_key = f"heat:allrank:{drama_type}:{limit}"
     cached = cache_get(cache_key)

@@ -70,6 +70,7 @@ Page({
       }
     } catch (e) {
       console.error('加载剧集信息失败', e)
+      wx.showToast({ title: '加载剧集信息失败', icon: 'none' })
     }
   },
 

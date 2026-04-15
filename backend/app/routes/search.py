@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from ..utils.db import query, query_one, execute
 from ..utils.cache import cache_get, cache_set
+from ..utils.request_helpers import get_int_arg
 from ..utils.response import success
 
 search_bp = Blueprint('search', __name__)
@@ -12,8 +13,8 @@ def search():
     """全局搜索"""
     keyword = request.args.get('keyword', '').strip()
     drama_type = request.args.get('type', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not keyword:
@@ -152,8 +153,8 @@ def upcoming():
 def by_genre():
     """按类型浏览"""
     genre = request.args.get('genre', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not genre:
@@ -186,8 +187,8 @@ def by_genre():
 def by_year():
     """按年份浏览"""
     year = request.args.get('year', '')
-    limit = min(int(request.args.get('limit', 20)), 50)
-    page = max(int(request.args.get('page', 1)), 1)
+    limit = get_int_arg('limit', 20, min_val=1, max_val=50)
+    page = get_int_arg('page', 1, min_val=1)
     offset = (page - 1) * limit
 
     if not year:
