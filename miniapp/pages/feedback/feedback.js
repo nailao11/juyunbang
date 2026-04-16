@@ -109,7 +109,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 意见反馈',
+      title: '热剧榜 — 意见反馈',
       path: '/pages/feedback/feedback'
     }
   }

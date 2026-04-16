@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-剧云榜 — 爬虫测试脚本 v4（Playwright）
+热剧榜 — 爬虫测试脚本 v4（Playwright）
 
 使用方法:
-    cd /opt/juyunbang/backend
+    cd /opt/rejubang/backend
     ./venv/bin/python test_crawl.py              # 测试Playwright浏览器和各平台连通性
     ./venv/bin/python test_crawl.py --save       # 完整采集并写入数据库
     ./venv/bin/python test_crawl.py --platform tencent  # 只测试单个平台
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     parser.add_argument('--skip-discovery', action='store_true', help='跳过列表API测试')
     args = parser.parse_args()
 
-    print("剧云榜 — 爬虫测试工具 v4 (Playwright)")
+    print("热剧榜 — 爬虫测试工具 v4 (Playwright)")
     print(f"Python {sys.version.split()[0]}")
 
     if args.save:

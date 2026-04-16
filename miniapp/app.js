@@ -2,7 +2,7 @@ App({
   globalData: {
     userInfo: null,
     token: null,
-    baseUrl: 'https://api.sqnl8.cn/api/v1',
+    baseUrl: 'https://api.nailao.asia/api/v1',
     themeMode: 'light', // light / dark / auto
     systemInfo: null
   },

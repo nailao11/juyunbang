@@ -1,0 +1,16 @@
+[Unit]
+Description=RejuBang Crawler Service (Playwright)
+After=network.target mariadb.service redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/rejubang/backend
+Environment="PATH=/opt/rejubang/backend/venv/bin:/usr/bin"
+Environment=PYTHONPATH=/opt/rejubang/backend
+ExecStart=/opt/rejubang/backend/venv/bin/python scheduler/task_scheduler.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

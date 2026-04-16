@@ -206,7 +206,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: `${this.data.drama.title || '剧集详情'} - 剧云榜`,
+      title: `${this.data.drama.title || '剧集详情'} - 热剧榜`,
       path: `/pages/drama-detail/drama-detail?id=${this.data.dramaId}`
     }
   }

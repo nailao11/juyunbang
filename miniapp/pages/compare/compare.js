@@ -131,7 +131,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 剧集对比',
+      title: '热剧榜 — 剧集对比',
       path: '/pages/compare/compare'
     }
   }

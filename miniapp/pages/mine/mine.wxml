@@ -89,7 +89,7 @@
 
     <!-- 底部信息 -->
     <view class="footer-info">
-      <text class="footer-text">剧云榜 v1.0.0</text>
+      <text class="footer-text">热剧榜 v1.0.0</text>
       <text class="footer-text">数据仅供参考，不构成任何建议</text>
     </view>
   </view>

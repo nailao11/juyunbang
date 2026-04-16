@@ -1,5 +1,5 @@
 {
-  "description": "剧云榜 - 全平台剧集实时热度监控",
+  "description": "热剧榜 - 全平台剧集实时热度监控",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -42,7 +42,7 @@
   "compileType": "miniprogram",
   "libVersion": "3.3.4",
   "appid": "wxTODO_REPLACE_WITH_REAL_APPID",
-  "projectname": "juyunbang",
+  "projectname": "rejubang",
   "condition": {},
   "editorSetting": {
     "tabIndent": "insertSpaces",

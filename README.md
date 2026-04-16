@@ -1,4 +1,4 @@
-# 剧云榜
+# 热剧榜
 
 全平台剧集实时热度监控与数据分析微信小程序。
 
@@ -27,7 +27,7 @@
 ## 项目结构
 
 ```
-juyunbang/
+rejubang/
 ├── backend/                 # 后端代码
 │   ├── app/                 # Flask应用
 │   │   ├── routes/          # 7个API蓝图（auth/heat/daily/weekly/drama/search/system）
@@ -52,7 +52,7 @@ juyunbang/
 详细的服务器搭建、数据库初始化、Playwright 安装、Nginx + SSL、systemd 服务等步骤请阅读：
 
 - **部署指南.md** — 完整部署流程（一步一步操作指引）
-- **剧云榜_完整实施方案.md** — 项目设计与实施背景说明（可选）
+- **追剧助手微信小程序_完整开发方案.md** — 前期设计文档（产品定位、功能清单、页面设计、算法说明）
 
 ## 环境要求
 

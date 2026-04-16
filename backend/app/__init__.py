@@ -11,7 +11,7 @@ def create_app():
     app.config.from_object(Config)
 
     # 跨域支持（微信小程序请求不受CORS限制，此处为开发调试用）
-    CORS(app, resources={r"/api/*": {"origins": ["https://servicewechat.com", "https://sqnl8.cn"]}})
+    CORS(app, resources={r"/api/*": {"origins": ["https://servicewechat.com", "https://nailao.asia"]}})
 
     # JWT认证
     JWTManager(app)
@@ -45,7 +45,7 @@ def create_app():
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'juyunbang-api'}
+        return {'status': 'ok', 'service': 'rejubang-api'}
 
     @app.route('/api/v1/test')
     def test():

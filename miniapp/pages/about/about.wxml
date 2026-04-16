@@ -5,9 +5,9 @@
     <!-- Logo区 -->
     <view class="about-logo-section">
       <view class="logo-circle">
-        <text class="logo-text">剧</text>
+        <text class="logo-text">热</text>
       </view>
-      <text class="app-name">剧云榜</text>
+      <text class="app-name">热剧榜</text>
       <text class="app-version">版本 1.0.0</text>
       <text class="app-slogan">全平台剧集热度数据助手</text>
     </view>
@@ -15,7 +15,7 @@
     <!-- 简介 -->
     <view class="card about-card">
       <text class="about-desc">
-        剧云榜是一款专注于剧集数据追踪与分析的工具，整合全平台播放量、热度、口碑等多维数据，为剧集爱好者提供专业、全面的数据参考。
+        热剧榜是一款专注于剧集数据追踪与分析的工具，整合全平台播放量、热度、口碑等多维数据，为剧集爱好者提供专业、全面的数据参考。
       </text>
     </view>
 
@@ -82,7 +82,7 @@
 
     <!-- 版权 -->
     <view class="copyright">
-      <text class="copyright-text">Copyright 2024-2026 剧云榜</text>
+      <text class="copyright-text">Copyright 2024-2026 热剧榜</text>
       <text class="copyright-text">All Rights Reserved</text>
     </view>
 

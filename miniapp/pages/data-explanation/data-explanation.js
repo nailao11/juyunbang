@@ -84,7 +84,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 数据说明',
+      title: '热剧榜 — 数据说明',
       path: '/pages/data-explanation/data-explanation'
     }
   }

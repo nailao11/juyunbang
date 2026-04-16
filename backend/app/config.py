@@ -11,8 +11,8 @@ class Config:
     # MySQL
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_PORT = int(os.getenv('DB_PORT', 3306))
-    DB_NAME = os.getenv('DB_NAME', 'juyunbang')
-    DB_USER = os.getenv('DB_USER', 'juyunbang')
+    DB_NAME = os.getenv('DB_NAME', 'rejubang')
+    DB_USER = os.getenv('DB_USER', 'rejubang')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 
     # Redis
@@ -27,7 +27,7 @@ class Config:
     # 七牛云
     QINIU_ACCESS_KEY = os.getenv('QINIU_ACCESS_KEY', '')
     QINIU_SECRET_KEY = os.getenv('QINIU_SECRET_KEY', '')
-    QINIU_BUCKET = os.getenv('QINIU_BUCKET', 'juyunbang')
+    QINIU_BUCKET = os.getenv('QINIU_BUCKET', 'rejubang')
     QINIU_DOMAIN = os.getenv('QINIU_DOMAIN', '')
 
     # JWT

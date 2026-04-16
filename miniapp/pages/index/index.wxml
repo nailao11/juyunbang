@@ -4,7 +4,7 @@
   <!-- 顶部渐变头部 -->
   <view class="header">
     <view class="header-content">
-      <text class="header-title">剧云榜</text>
+      <text class="header-title">热剧榜</text>
       <text class="header-subtitle">全平台实时热度监控</text>
     </view>
 
