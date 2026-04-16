@@ -102,7 +102,13 @@ systemctl restart juyunbang-crawler
 # 9. 验证Playwright
 echo "[9/10] 验证Playwright..."
 cd $BACKEND_DIR
-./venv/bin/python test_crawl.py --check 2>/dev/null && echo "  -> Playwright验证通过" || echo "  -> Playwright验证失败，请检查日志"
+./venv/bin/python -c "
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b = p.chromium.launch(headless=True, args=['--no-sandbox'])
+    b.close()
+print('OK')
+" 2>/dev/null && echo "  -> Playwright验证通过" || echo "  -> Playwright验证失败，请检查日志（可手动执行: cd $BACKEND_DIR && ./venv/bin/python test_crawl.py）"
 
 # 10. 验证服务
 echo "[10/10] 验证服务状态..."
