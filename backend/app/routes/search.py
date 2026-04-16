@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from ..utils.db import query, query_one, execute
+from ..utils.db import query, query_one
 from ..utils.cache import cache_get, cache_set
 from ..utils.request_helpers import get_int_arg
 from ..utils.response import success

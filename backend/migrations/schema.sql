@@ -63,15 +63,7 @@ INSERT IGNORE INTO platforms (name, short_name, color, sort_order, is_active) VA
 ('爱奇艺', 'iqiyi', '#00BE06', 1, 1),
 ('优酷', 'youku', '#1EBCF2', 2, 1),
 ('腾讯视频', 'tencent', '#FF6600', 3, 1),
-('芒果TV', 'mgtv', '#FF5F00', 4, 1),
-('哔哩哔哩', 'bilibili', '#FB7299', 5, 0),
-('搜狐视频', 'sohu', '#F04E23', 6, 0),
-('抖音', 'douyin', '#000000', 7, 0),
-('微博', 'weibo', '#E6162D', 8, 0),
-('百度', 'baidu', '#2932E1', 9, 0);
-
--- 确保已有数据库中也禁用非核心平台
-UPDATE platforms SET is_active = 0 WHERE short_name IN ('bilibili', 'sohu', 'douyin', 'weibo', 'baidu');
+('芒果TV', 'mgtv', '#FF5F00', 4, 1);
 
 -- 表3：剧集-平台关联表
 CREATE TABLE IF NOT EXISTS drama_platforms (
@@ -235,82 +227,7 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_unionid (unionid)
 ) ENGINE=InnoDB COMMENT='用户表';
 
--- 表12：用户追剧记录表
-CREATE TABLE IF NOT EXISTS user_tracking (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  user_id         INT NOT NULL,
-  drama_id        INT NOT NULL,
-  status          ENUM('watching','want_to_watch','watched','dropped')
-                  DEFAULT 'watching' COMMENT '追剧状态',
-  current_episode INT DEFAULT 0 COMMENT '当前观看到第几集',
-  user_score      DECIMAL(3,1) COMMENT '用户评分(1-10)',
-  user_comment    TEXT COMMENT '用户短评',
-  started_at      DATE COMMENT '开始追的日期',
-  finished_at     DATE COMMENT '看完的日期',
-  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (drama_id) REFERENCES dramas(id),
-  UNIQUE KEY uk_user_drama (user_id, drama_id),
-  INDEX idx_user_status (user_id, status)
-) ENGINE=InnoDB COMMENT='用户追剧记录表';
-
--- 表13：用户追剧笔记表
-CREATE TABLE IF NOT EXISTS user_notes (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  user_id         INT NOT NULL,
-  drama_id        INT NOT NULL,
-  episode_number  INT COMMENT '关联集数',
-  content         TEXT NOT NULL COMMENT '笔记内容',
-  is_private      TINYINT(1) DEFAULT 1 COMMENT '是否私密',
-  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (drama_id) REFERENCES dramas(id),
-  INDEX idx_user_drama (user_id, drama_id)
-) ENGINE=InnoDB COMMENT='用户追剧笔记表';
-
--- 表14：影视资讯表
-CREATE TABLE IF NOT EXISTS news (
-  id                INT AUTO_INCREMENT PRIMARY KEY,
-  title             VARCHAR(300) NOT NULL COMMENT '标题',
-  content           TEXT COMMENT '内容',
-  summary           VARCHAR(500) COMMENT '摘要',
-  cover_url         VARCHAR(500) COMMENT '封面图',
-  source            VARCHAR(100) COMMENT '来源',
-  source_url        VARCHAR(500) COMMENT '原文链接',
-  category          ENUM('schedule','production','review','data_report','other')
-                    COMMENT '分类',
-  related_drama_ids VARCHAR(200) COMMENT '关联剧集ID',
-  view_count        INT DEFAULT 0 COMMENT '浏览次数',
-  is_published      TINYINT(1) DEFAULT 0 COMMENT '是否发布',
-  published_at      DATETIME COMMENT '发布时间',
-  created_at        DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB COMMENT='影视资讯表';
-
--- 表15：每日数据简报表
-CREATE TABLE IF NOT EXISTS daily_report (
-  id                      INT AUTO_INCREMENT PRIMARY KEY,
-  stat_date               DATE NOT NULL COMMENT '统计日期',
-  top_heat_drama_id       INT COMMENT '热度冠军剧集ID',
-  top_heat_title          VARCHAR(200) COMMENT '热度冠军剧名',
-  top_heat_value          DECIMAL(12,2) COMMENT '热度冠军热度值',
-  top_play_drama_id       INT COMMENT '播放冠军剧集ID',
-  top_play_title          VARCHAR(200) COMMENT '播放冠军剧名',
-  top_play_value          BIGINT COMMENT '播放冠军播放量',
-  biggest_riser_drama_id  INT COMMENT '最大黑马剧集ID',
-  biggest_riser_title     VARCHAR(200) COMMENT '最大黑马剧名',
-  biggest_riser_change    INT COMMENT '最大黑马排名上升位数',
-  total_dramas            INT COMMENT '当日追踪剧集总数',
-  summary                 TEXT COMMENT '日报摘要文字',
-  generated_at            DATETIME COMMENT '生成时间',
-
-  UNIQUE KEY uk_stat_date (stat_date)
-) ENGINE=InnoDB COMMENT='数据简报表';
-
--- 表16：采集任务记录表
+-- 表12：采集任务记录表
 CREATE TABLE IF NOT EXISTS crawl_tasks (
   id            BIGINT AUTO_INCREMENT PRIMARY KEY,
   task_type     VARCHAR(50) NOT NULL COMMENT '任务类型',
@@ -323,7 +240,7 @@ CREATE TABLE IF NOT EXISTS crawl_tasks (
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='采集任务记录表';
 
--- 表17：系统配置表
+-- 表13：系统配置表
 CREATE TABLE IF NOT EXISTS system_config (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   config_key   VARCHAR(100) NOT NULL COMMENT '配置键',
@@ -344,7 +261,7 @@ INSERT INTO system_config (config_key, config_value, description) VALUES
 ('index_weight_play', '0.25', '剧力指数-播放量权重'),
 ('index_weight_reputation', '0.15', '剧力指数-口碑权重');
 
--- 表18：用户反馈表
+-- 表14：用户反馈表
 CREATE TABLE IF NOT EXISTS feedback (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   user_id    INT COMMENT '用户ID',
