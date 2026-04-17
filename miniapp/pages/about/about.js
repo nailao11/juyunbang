@@ -15,7 +15,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 关于我们',
+      title: '热剧榜 — 关于我们',
       path: '/pages/about/about'
     }
   }

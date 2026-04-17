@@ -1,5 +1,5 @@
 """
-剧云榜 — 定时任务调度器
+热剧榜 — 定时任务调度器
 管理所有数据采集和计算任务的定时执行
 """
 import sys
@@ -15,7 +15,7 @@ from loguru import logger
 
 # 配置日志
 logger.add(
-    "/opt/juyunbang/logs/scheduler_{time:YYYY-MM-DD}.log",
+    "/opt/rejubang/logs/scheduler_{time:YYYY-MM-DD}.log",
     rotation="00:00",
     retention="30 days",
     level="INFO",
@@ -192,7 +192,7 @@ def main():
         name='清理旧数据'
     )
 
-    logger.info("剧云榜定时任务调度器已启动")
+    logger.info("热剧榜定时任务调度器已启动")
     logger.info(f"已注册 {len(scheduler.get_jobs())} 个定时任务：")
     for job in scheduler.get_jobs():
         logger.info(f"  - {job.name} ({job.trigger})")

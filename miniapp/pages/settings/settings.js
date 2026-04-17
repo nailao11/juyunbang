@@ -126,7 +126,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 设置',
+      title: '热剧榜 — 设置',
       path: '/pages/settings/settings'
     }
   }

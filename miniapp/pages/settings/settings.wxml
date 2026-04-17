@@ -50,7 +50,7 @@
       </view>
       <view class="settings-divider"></view>
       <view class="settings-item" bindtap="navigateTo" data-url="/pages/about/about">
-        <text class="settings-label">关于剧云榜</text>
+        <text class="settings-label">关于热剧榜</text>
         <text class="picker-arrow">›</text>
       </view>
       <view class="settings-divider"></view>

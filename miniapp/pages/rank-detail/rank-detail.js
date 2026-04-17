@@ -108,7 +108,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 排行详情',
+      title: '热剧榜 — 排行详情',
       path: '/pages/rank-detail/rank-detail'
     }
   }

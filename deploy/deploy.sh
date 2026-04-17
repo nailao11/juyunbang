@@ -1,28 +1,28 @@
 #!/bin/bash
-# 剧云榜 — 一键部署脚本
+# 热剧榜 — 一键部署脚本
 # 用法：在服务器上执行 bash deploy.sh
-# 前提：已将仓库 clone 到 /opt/juyunbang
+# 前提：已将仓库 clone 到 /opt/rejubang
 
 set -e
 
 echo "============================="
-echo "  剧云榜 一键部署脚本"
+echo "  热剧榜 一键部署脚本"
 echo "============================="
 
-PROJECT_DIR="/opt/juyunbang"
+PROJECT_DIR="/opt/rejubang"
 BACKEND_DIR="$PROJECT_DIR/backend"
 
 # 检查项目目录
 if [ ! -d "$BACKEND_DIR" ]; then
     echo "[错误] 未找到 $BACKEND_DIR"
-    echo "请先执行: git clone <仓库地址> /opt/juyunbang"
+    echo "请先执行: git clone <仓库地址> /opt/rejubang"
     exit 1
 fi
 
 # 1. 创建必要目录
 echo "[1/10] 创建必要目录..."
-mkdir -p /opt/juyunbang/logs
-mkdir -p /var/www/juyunbang
+mkdir -p /opt/rejubang/logs
+mkdir -p /var/www/rejubang
 
 # 2. 配置Swap（4GB内存服务器建议）
 echo "[2/10] 检查Swap..."
@@ -84,20 +84,20 @@ fi
 
 # 7. Nginx配置
 echo "[7/10] 配置Nginx..."
-cp "$PROJECT_DIR/deploy/nginx.conf" /etc/nginx/sites-available/juyunbang
-ln -sf /etc/nginx/sites-available/juyunbang /etc/nginx/sites-enabled/
+cp "$PROJECT_DIR/deploy/nginx.conf" /etc/nginx/sites-available/rejubang
+ln -sf /etc/nginx/sites-available/rejubang /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 
 # 8. Systemd服务
 echo "[8/10] 配置系统服务..."
-cp "$PROJECT_DIR/deploy/juyunbang-api.service" /etc/systemd/system/
-cp "$PROJECT_DIR/deploy/juyunbang-crawler.service" /etc/systemd/system/
+cp "$PROJECT_DIR/deploy/rejubang-api.service" /etc/systemd/system/
+cp "$PROJECT_DIR/deploy/rejubang-crawler.service" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable juyunbang-api
-systemctl enable juyunbang-crawler
-systemctl restart juyunbang-api
-systemctl restart juyunbang-crawler
+systemctl enable rejubang-api
+systemctl enable rejubang-crawler
+systemctl restart rejubang-api
+systemctl restart rejubang-crawler
 
 # 9. 验证Playwright
 echo "[9/10] 验证Playwright..."
@@ -114,18 +114,18 @@ print('OK')
 echo "[10/10] 验证服务状态..."
 sleep 3
 echo ""
-if systemctl is-active --quiet juyunbang-api; then
+if systemctl is-active --quiet rejubang-api; then
     echo "[OK] API服务运行正常"
 else
     echo "[FAIL] API服务启动失败"
-    echo "  查看日志: journalctl -u juyunbang-api -n 50"
+    echo "  查看日志: journalctl -u rejubang-api -n 50"
 fi
 
-if systemctl is-active --quiet juyunbang-crawler; then
+if systemctl is-active --quiet rejubang-crawler; then
     echo "[OK] 采集服务运行正常"
 else
     echo "[FAIL] 采集服务启动失败"
-    echo "  查看日志: journalctl -u juyunbang-crawler -n 50"
+    echo "  查看日志: journalctl -u rejubang-crawler -n 50"
 fi
 
 response=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/health 2>/dev/null || echo "000")
@@ -139,12 +139,12 @@ echo ""
 echo "============================="
 echo "  部署完成！"
 echo ""
-echo "  API地址: https://api.sqnl8.cn/api/v1/test"
-echo "  健康检查: https://api.sqnl8.cn/health"
+echo "  API地址: https://api.nailao.asia/api/v1/test"
+echo "  健康检查: https://api.nailao.asia/health"
 echo ""
 echo "  常用命令："
-echo "  查看API日志:   journalctl -u juyunbang-api -f"
-echo "  查看采集日志:  journalctl -u juyunbang-crawler -f"
-echo "  重启API:      systemctl restart juyunbang-api"
-echo "  重启采集:     systemctl restart juyunbang-crawler"
+echo "  查看API日志:   journalctl -u rejubang-api -f"
+echo "  查看采集日志:  journalctl -u rejubang-crawler -f"
+echo "  重启API:      systemctl restart rejubang-api"
+echo "  重启采集:     systemctl restart rejubang-crawler"
 echo "============================="

@@ -141,7 +141,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 实时热度排行',
+      title: '热剧榜 — 实时热度排行',
       path: '/pages/index/index'
     }
   }

@@ -239,7 +239,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '剧云榜 — 搜索',
+      title: '热剧榜 — 搜索',
       path: '/pages/search/search'
     }
   }
