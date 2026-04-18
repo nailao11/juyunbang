@@ -25,6 +25,33 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('FLASK_ENV', 'production')
 
 
+def _diagnose_api(crawler, url, params, json_mode=False):
+    """诊断API接口返回内容，帮助定位发现失败原因"""
+    try:
+        resp = crawler.fetch(url, params=params)
+        if not resp:
+            print(f"  [诊断] 请求失败：无响应（网络不通或被封禁）")
+            return
+        print(f"  [诊断] HTTP {resp.status_code}, 长度={len(resp.text)} 字节")
+        if json_mode:
+            try:
+                data = resp.json()
+                # 显示顶层结构
+                if isinstance(data, dict):
+                    print(f"  [诊断] JSON顶层key: {list(data.keys())[:10]}")
+                    for k in ['code', 'status', 'msg', 'message', 'ret']:
+                        if k in data:
+                            print(f"  [诊断] {k}={data[k]}")
+                else:
+                    print(f"  [诊断] JSON类型: {type(data).__name__}, 长度={len(data) if hasattr(data, '__len__') else '?'}")
+            except Exception as e:
+                print(f"  [诊断] 非JSON响应，前200字符: {resp.text[:200]}")
+        else:
+            print(f"  [诊断] 响应前300字符: {resp.text[:300]}")
+    except Exception as e:
+        print(f"  [诊断] 请求异常: {e}")
+
+
 def check_playwright():
     """检查Playwright是否可用"""
     print("\n[1/3] 检查Playwright...")
@@ -63,6 +90,11 @@ def test_discovery():
     print("\n  --- 腾讯视频 ---")
     dramas = crawler._discover_tencent_dramas()
     print(f"  发现 {len(dramas)} 部候选剧")
+    if not dramas:
+        print("  [诊断] 尝试直接请求腾讯API...")
+        _diagnose_api(crawler, 'https://v.qq.com/x/bu/pagesheet/list',
+                      {'_all': '1', 'append': '1', 'channel': 'tv',
+                       'listpage': '2', 'offset': '0', 'pagesize': '60', 'sort': '75'})
     for d in dramas[:3]:
         print(f"    {d['title']} (cid={d['cid']})")
     results['tencent'] = len(dramas)
@@ -70,6 +102,11 @@ def test_discovery():
     print("\n  --- 爱奇艺 ---")
     dramas = crawler._discover_iqiyi_dramas()
     print(f"  发现 {len(dramas)} 部候选剧")
+    if not dramas:
+        print("  [诊断] 尝试直接请求爱奇艺API...")
+        _diagnose_api(crawler, 'https://pcw-api.iqiyi.com/search/recommend/list',
+                      {'channel_id': '2', 'data_type': '1', 'mode': '24',
+                       'page_id': '1', 'ret_num': '60'}, json_mode=True)
     for d in dramas[:3]:
         print(f"    {d['title']} -> {d['url']}")
     results['iqiyi'] = len(dramas)
@@ -77,6 +114,11 @@ def test_discovery():
     print("\n  --- 芒果TV ---")
     dramas = crawler._discover_mgtv_dramas()
     print(f"  发现 {len(dramas)} 部候选剧")
+    if not dramas:
+        print("  [诊断] 尝试直接请求芒果TV API...")
+        _diagnose_api(crawler, 'https://pianku.api.mgtv.com/rider/list/pcweb/v3',
+                      {'allowedRC': '1', 'platform': 'pcweb', 'channelId': '2',
+                       'pn': '1', 'pc': '60', 'hudong': '1', 'orderType': 'c2'}, json_mode=True)
     for d in dramas[:3]:
         print(f"    {d['title']} (part_id={d['part_id']}, vid={d['vid']})")
     results['mgtv'] = len(dramas)
@@ -100,7 +142,6 @@ def test_heat_extraction(platform=None):
     ]
 
     with BrowserHelper(headless=True) as browser:
-        # 优酷需要browser作为discovery参数，单独测试
         for name, discover, extract, url_fn, label in tests:
             if platform and platform != name:
                 continue
@@ -119,10 +160,10 @@ def test_heat_extraction(platform=None):
                     print(f"  ✓ {name}热度提取成功")
                 else:
                     print(f"  ✗ {name}未提取到热度（页面可能改版或有反爬）")
+                    _diagnose_page(browser, url, name)
             except Exception as e:
                 print(f"  ✗ {name}失败: {e}")
 
-        # 优酷需要browser
         if not platform or platform == 'youku':
             print(f"\n  --- youku ---")
             try:
@@ -136,8 +177,11 @@ def test_heat_extraction(platform=None):
                         print(f"  ✓ youku热度提取成功")
                     else:
                         print(f"  ✗ youku未提取到热度")
+                        _diagnose_page(browser, d['url'], 'youku')
                 else:
                     print(f"  !! youku未发现任何剧")
+                    print(f"  [诊断] 尝试用浏览器访问优酷分类页...")
+                    _diagnose_page(browser, 'https://www.youku.com/category/show/c_97_s_1_d_1.html', 'youku_category')
             except Exception as e:
                 print(f"  ✗ youku失败: {e}")
 
@@ -156,10 +200,41 @@ def test_heat_extraction(platform=None):
                         print(f"  ✓ mgtv播放量提取成功")
                     else:
                         print(f"  ✗ mgtv未提取到播放量")
+                        _diagnose_page(browser, url, 'mgtv')
                 else:
                     print(f"  !! mgtv未发现任何剧")
             except Exception as e:
                 print(f"  ✗ mgtv失败: {e}")
+
+
+def _diagnose_page(browser, url, name):
+    """当热度提取失败时，打印页面诊断信息帮助定位问题"""
+    import re
+    try:
+        mobile = name in ('tencent', 'mgtv')
+        html = browser.get_html(url, mobile=mobile, timeout=20000)
+        if not html:
+            print(f"  [诊断] 页面返回空内容")
+            return
+        print(f"  [诊断] 页面HTML长度: {len(html)} 字符")
+        # 搜索页面中包含"热度"或"播放"的片段
+        for keyword in ['热度', '播放', 'heat', 'hot']:
+            matches = [(m.start(), m.group()) for m in re.finditer(
+                rf'.{{0,30}}{keyword}.{{0,30}}', html, re.IGNORECASE)]
+            if matches:
+                print(f"  [诊断] 找到 \"{keyword}\" {len(matches)} 处，示例:")
+                for pos, snippet in matches[:3]:
+                    clean = re.sub(r'<[^>]+>', '', snippet).strip()
+                    if clean:
+                        print(f"    位置{pos}: ...{clean}...")
+            else:
+                print(f"  [诊断] 页面中未找到 \"{keyword}\"")
+        # 如果页面很短，可能是被重定向或反爬
+        if len(html) < 2000:
+            print(f"  [诊断] 页面内容过短，可能是反爬页面，前500字符:")
+            print(f"    {html[:500]}")
+    except Exception as e:
+        print(f"  [诊断] 诊断页面失败: {e}")
 
 
 def run_full_crawl():
