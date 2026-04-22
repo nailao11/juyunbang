@@ -31,6 +31,9 @@
 - [Q23. 录入一部剧后多久能采到数据？](#q23)
 - [Q24. 一部剧完结了怎么下架？](#q24)
 - [Q25. 数据库空间会无限增长吗？怎么控制？](#q25)
+- [Q26. Debian 13 上 `playwright install-deps` 报"E: Unable to locate package libasound2"](#q26)
+- [Q27. Debian 13 上 `pip install lxml` 报编译错误 / 找不到 libxml2](#q27)
+- [Q28. Debian 13 系统 pip 报 "externally-managed-environment"](#q28)
 
 ---
 
@@ -629,6 +632,72 @@ with app.app_context():
     job_archive_old_heat()
 "
 ```
+
+---
+
+---
+
+## <a id="q26"></a>Q26. Debian 13 上 `playwright install-deps` 报 "E: Unable to locate package libasound2"
+
+**原因**：你用的 playwright 版本太旧（< 1.55），它内置的依赖清单还是 Debian 12 时代的老包名。Debian 13 为 64-bit `time_t` 迁移把 `libasound2` 等库改名为 `libasound2t64`。
+
+**处理**：升级 playwright。先切到后端：
+
+```
+root@server:~# cd /opt/rejubang/backend
+root@server:/opt/rejubang/backend# ./venv/bin/pip install 'playwright>=1.55' --upgrade
+root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
+root@server:/opt/rejubang/backend# ./venv/bin/playwright install-deps chromium
+```
+
+或者手动装（见 [03-项目与Python环境.md 第 4.3 节](./03-项目与Python环境.md#43-如果-install-deps-报错)）。
+
+---
+
+## <a id="q27"></a>Q27. Debian 13 上 `pip install lxml` 报编译错误 / 找不到 libxml2
+
+**原因**：你装的 lxml 版本太旧（4.x），没有 Python 3.13 预编译 wheel，pip 会尝试从源码编译，而源码编译需要系统里有 `libxml2-dev` 和 `libxslt1-dev`。
+
+**处理**：升级 lxml 到 5.3+（已内置 cp313 wheel）。
+
+```
+root@server:/opt/rejubang/backend# ./venv/bin/pip install 'lxml>=5.3' --upgrade
+```
+
+如果你坚持要用旧版（不推荐）：
+
+```
+root@server:~# apt install -y libxml2-dev libxslt1-dev python3-dev
+root@server:/opt/rejubang/backend# ./venv/bin/pip install lxml==4.9.3 --no-binary=:all:
+```
+
+---
+
+## <a id="q28"></a>Q28. Debian 13 系统 pip 报 "externally-managed-environment"
+
+**报错原文**：
+
+```
+error: externally-managed-environment
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install ...
+```
+
+**原因**：Debian 13（其实 12 也一样）严格执行 PEP 668，禁止对系统 Python 环境安装包。
+
+**处理**：**不要用系统 pip**。本项目所有 `pip install` 命令都应该用虚拟环境里的 pip：
+
+```
+❌ 错误（会被 PEP 668 拒绝）：
+root@server:~# pip install xxx
+root@server:~# pip3 install xxx
+
+✅ 正确（走虚拟环境）：
+root@server:~# cd /opt/rejubang/backend
+root@server:/opt/rejubang/backend# ./venv/bin/pip install xxx
+```
+
+如果你一不小心用系统 pip 装了某个包，用 `apt` 对应包或者删掉重来都不影响项目。
 
 ---
 

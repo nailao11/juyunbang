@@ -12,9 +12,12 @@ DBUtils==3.1.0
 # 数据采集
 requests==2.31.0
 beautifulsoup4==4.12.2
-lxml==4.9.3
+# lxml 5.3.0 是首个带 Python 3.13 cp313 wheel 的版本，旧版在 Debian 13 会触发源码编译
+lxml==5.3.0
 fake-useragent==1.4.0
-playwright==1.40.0
+# playwright 1.55.0 是首个支持 Debian 13 (trixie) 的版本 (commit cbe65d5, 2025-08)
+# 旧版 install-deps 会找不到 libasound2t64 等 t64 包名
+playwright==1.55.0
 
 # 定时任务
 APScheduler==3.10.4
@@ -26,4 +29,5 @@ qiniu==7.12.1
 python-dotenv==1.0.0
 loguru==0.7.2
 pyjwt==2.8.0
-cryptography==41.0.7
+# cryptography 44.0.0 对齐 OpenSSL 3.x + Python 3.13
+cryptography==44.0.0

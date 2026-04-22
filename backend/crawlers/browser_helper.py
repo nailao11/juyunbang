@@ -3,13 +3,23 @@ Playwright 无头浏览器助手
 用于访问SPA页面、渲染JS、提取热度值等需要浏览器执行的场景。
 
 安装:
-    pip install playwright==1.40.0
+    pip install playwright==1.55.0
     playwright install chromium
 
 在 Debian/Ubuntu 系统上还需要安装 Chrome 依赖:
     playwright install-deps chromium
-    # 或手动安装:
-    # apt install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2 libpango-1.0-0 libcairo2
+
+若 install-deps 失败需手动安装，注意区分系统版本：
+    # Debian 13 (Trixie) / Ubuntu 24.04+：部分库已改名带 t64 后缀
+    apt install -y libnss3 libatk-bridge2.0-0t64 libdrm2 libxkbcommon0 libgbm1 \\
+      libasound2t64 libpango-1.0-0 libcairo2 libxrandr2 libxcomposite1 \\
+      libxdamage1 libxfixes3 libatk1.0-0t64 libatspi2.0-0t64 libcups2t64 \\
+      libglib2.0-0t64 libnspr4 libdbus-1-3 libx11-6 libxcb1 libxext6
+
+    # Debian 12 (Bookworm) / Ubuntu 22.04：老包名
+    apt install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \\
+      libasound2 libpango-1.0-0 libcairo2 libxrandr2 libx11-xcb1 libxcomposite1 \\
+      libxdamage1 libxfixes3 libxss1 libatk1.0-0 libcups2 libgtk-3-0
 """
 
 from contextlib import contextmanager
@@ -45,8 +55,9 @@ class BrowserHelper:
         except ImportError:
             raise RuntimeError(
                 "Playwright未安装。请执行:\n"
-                "  pip install playwright==1.40.0\n"
-                "  playwright install chromium"
+                "  ./venv/bin/pip install -r requirements.txt\n"
+                "  ./venv/bin/playwright install chromium\n"
+                "  ./venv/bin/playwright install-deps chromium"
             )
 
         self._playwright = sync_playwright().start()
