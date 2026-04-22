@@ -35,3 +35,6 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
         seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 86400))
     )
+
+    # 管理后台 token（用于 /api/v1/admin 剧集录入）
+    ADMIN_TOKEN = os.getenv('ADMIN_TOKEN', '')
