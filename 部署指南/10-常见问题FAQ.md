@@ -26,6 +26,11 @@
 - [Q18. 磁盘被日志占满](#q18)
 - [Q19. 如何修改域名（换域名）](#q19)
 - [Q20. 如何关闭/卸载整个服务](#q20)
+- [Q21. 访问 /admin 提示 "Token 错误" / 打不开](#q21)
+- [Q22. 管理后台"测试热度提取"显示"未提取到数值"](#q22)
+- [Q23. 录入一部剧后多久能采到数据？](#q23)
+- [Q24. 一部剧完结了怎么下架？](#q24)
+- [Q25. 数据库空间会无限增长吗？怎么控制？](#q25)
 
 ---
 
@@ -481,6 +486,148 @@ root@server:~# rm -rf /opt/rejubang
 
 ```
 root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE rejubang; DROP USER 'rejubang'@'localhost';"
+```
+
+---
+
+---
+
+## <a id="q21"></a>Q21. 访问 /admin 提示 "Token 错误" / 打不开
+
+### 情况 1：404 / 502
+
+后端没起来或 Nginx 配置旧。
+
+```
+root@server:~# systemctl status rejubang-api
+root@server:~# nginx -t && grep admin /etc/nginx/sites-available/rejubang
+```
+
+如果 Nginx 配置里没有 `location = /admin {` 这段，说明你用的是老版本 nginx.conf，重新复制：
+
+```
+root@server:~# cp /opt/rejubang/deploy/nginx.conf /etc/nginx/sites-available/rejubang
+# 然后再按第六册 3.3 替换域名
+root@server:~# nginx -t && systemctl restart nginx
+```
+
+### 情况 2："ADMIN_TOKEN 未配置，无法使用管理后台"
+
+`.env` 里没有 `ADMIN_TOKEN` 字段。编辑加上：
+
+```
+root@server:~# nano /opt/rejubang/backend/.env
+# 加一行：ADMIN_TOKEN=zCfQR0OkgWbZwaG4iw5Vb1E3ksvGAxTpR8nGk7gd--c
+root@server:~# systemctl restart rejubang-api
+```
+
+### 情况 3：登录页输完点按钮报 "Token 错误"
+
+粘贴的 token 里带了空格或换行。打开 `.env` 确认：
+
+```
+root@server:~# grep ADMIN_TOKEN /opt/rejubang/backend/.env
+```
+
+复制**等号右边完整字符串**粘贴到登录框。
+
+---
+
+## <a id="q22"></a>Q22. 管理后台"测试热度提取"显示"未提取到数值"
+
+**原因排查**：
+
+| 情况 | 处理 |
+|---|---|
+| URL 本身错的 | 浏览器直接打开这个 URL，如果进不去剧集详情页，说明 URL 有问题 |
+| 剧刚开播，页面还没热度值 | 等几小时再试 |
+| 平台页面改版了 | 需要更新 `backend/crawlers/airing_crawler.py` 里对应的 `_extract_xxx_heat()` 正则 |
+| Playwright 被反爬阻断 | `tail -100 /opt/rejubang/logs/app_$(date +%Y-%m-%d).log` 看报错，可能是 Chromium 启动问题 |
+| 芒果TV 的 URL 只有一段数字 | 芒果需要 `partId/clipId` 两段，缺一不可 |
+
+快速验证 Playwright 能启动：
+```
+root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --env
+```
+
+---
+
+## <a id="q23"></a>Q23. 录入一部剧后多久能采到数据？
+
+- **默认**：下一个 15 分钟整点，爬虫自动跑时会带上新剧
+- **立即**：SSH 上执行 `systemctl restart rejubang-crawler`（会触发首次启动立即采集）
+- **或者**：`cd /opt/rejubang/backend && ./venv/bin/python test_crawl.py --run`
+
+采集后查：
+
+```
+root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+SELECT d.title, p.short_name, h.heat_value, h.record_time
+FROM heat_realtime h
+JOIN dramas d ON h.drama_id=d.id
+JOIN platforms p ON h.platform_id=p.id
+WHERE h.record_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+ORDER BY h.record_time DESC;
+"
+```
+
+---
+
+## <a id="q24"></a>Q24. 一部剧完结了怎么下架？
+
+**方式 1：管理后台**（推荐）：登录 `/admin` → "当前在播剧清单"表格 → 点该剧右侧 **"下架"** 按钮。
+
+下架后：
+- 状态变为 `finished`
+- 爬虫下一轮跳过这部剧（不再浪费 Playwright 资源）
+- 已积累的历史数据**保留**（小程序继续能查）
+- 若以后想重新上架，同一页点 **"上架"** 即可
+
+**方式 2：直接改库**：
+
+```
+root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+UPDATE dramas SET status='finished' WHERE title='蜜语纪';
+"
+```
+
+---
+
+## <a id="q25"></a>Q25. 数据库空间会无限增长吗？怎么控制？
+
+**不会**。项目已内置自动归档策略（每日 04:00 运行）：
+
+| 数据表 | 保留期 | 稳态空间 |
+|---|---|---|
+| `heat_realtime`（原始 15 分钟粒度） | 90 天 | ~100 MB（30 剧场景） |
+| `playcount_snapshot` | 90 天 | ~10 MB |
+| `heat_daily`（每天 1 条聚合） | 365 天 | ~1.5 MB |
+| `dramas` / `drama_platforms` | 永久 | ~0.1 MB |
+
+**手动查一下当前占用**：
+
+```
+root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
+SELECT table_name, ROUND(data_length/1024/1024,2) AS data_mb,
+       ROUND(index_length/1024/1024,2) AS idx_mb, table_rows
+FROM information_schema.tables
+WHERE table_schema='rejubang'
+ORDER BY data_length DESC;
+"
+```
+
+**如果归档任务没跑**（表大小异常增长）：
+
+```
+# 手动触发一次
+root@server:~# cd /opt/rejubang/backend
+root@server:/opt/rejubang/backend# ./venv/bin/python -c "
+from app import create_app
+app = create_app()
+with app.app_context():
+    from scheduler.task_scheduler import job_archive_old_heat
+    job_archive_old_heat()
+"
 ```
 
 ---

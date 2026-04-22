@@ -160,6 +160,8 @@ root@server:/opt/rejubang/deploy# sed -i "s|nailao\.asia|$DOMAIN|g" nginx.conf
 root@server:/opt/rejubang/deploy# sed -i "s|api\.$DOMAIN|$API_DOMAIN|g" nginx.conf
 ```
 
+> 📌 **2026-04 版变更**：nginx.conf 里新增了 `/admin` 的反向代理（指向管理后台），无需额外配置，sed 替换域名后即生效。
+
 第一条：把所有 `nailao.asia` 换成你的主域名（包括证书路径里的）
 第二条：如果你的 API 子域名不是 `api.<主域名>`，把 `api.<你的主域名>` 再换成你实际的 API 域名
 

@@ -1,6 +1,10 @@
 """
-热剧榜 — 定时任务调度器
-管理所有数据采集和计算任务的定时执行
+热剧榜 — 定时任务调度器（v2，2026-04 重构）
+
+变更:
+    - 移除了自动"发现新剧"的概念，热度采集改为读 drama_platforms 表
+    - 新增"冷数据归档"任务：原始热度 > 90 天 → 聚合进 heat_daily 后删除
+    - 保留所有计算/发布任务
 """
 import sys
 import os
@@ -24,18 +28,12 @@ logger.add(
 
 
 def job_crawl_heat():
-    """每15分钟：采集近30天新剧的站内热度（使用Playwright无头浏览器）"""
+    """每15分钟：根据 drama_platforms 表采集在播剧的热度"""
     logger.info("=== 开始热度数据采集任务 ===")
     try:
-        from crawlers.base_crawler import BaseCrawler
-        BaseCrawler.clear_drama_cache()
-
         from crawlers.airing_crawler import AiringCrawler
-        crawler = AiringCrawler()
-        total_saved = crawler.crawl()
-
+        total_saved = AiringCrawler().crawl()
         logger.info(f"=== 热度采集完成，本轮共保存 {total_saved} 条 ===")
-
     except Exception as e:
         logger.error(f"热度采集任务异常: {e}")
         import traceback
@@ -47,8 +45,7 @@ def job_clean_data():
     logger.info("=== 开始数据清洗 ===")
     try:
         from processors.data_cleaner import DataCleaner
-        cleaner = DataCleaner()
-        cleaner.run()
+        DataCleaner().run()
     except Exception as e:
         logger.error(f"数据清洗异常: {e}")
 
@@ -78,8 +75,7 @@ def job_detect_anomalies():
     logger.info("=== 开始热度异动检测 ===")
     try:
         from processors.anomaly_detector import AnomalyDetector
-        detector = AnomalyDetector()
-        detector.run()
+        AnomalyDetector().run()
     except Exception as e:
         logger.error(f"异动检测异常: {e}")
 
@@ -99,105 +95,107 @@ def job_crawl_douban():
     logger.info("=== 开始豆瓣评分更新 ===")
     try:
         from crawlers.douban_crawler import DoubanCrawler
-        crawler = DoubanCrawler()
-        crawler.crawl()
+        DoubanCrawler().crawl()
     except Exception as e:
         logger.error(f"豆瓣评分更新异常: {e}")
 
 
-def job_clean_old_data():
-    """每日04:00：清理30天前的实时热度数据"""
-    logger.info("=== 开始清理旧数据 ===")
-    try:
-        from app.utils.db import execute
-        affected = execute(
-            "DELETE FROM heat_realtime WHERE record_time < DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        )
-        logger.info(f"清理了 {affected} 条过期实时热度数据")
+def job_archive_old_heat():
+    """
+    每日04:00：归档冷数据（空间管理）
+        - 原始 heat_realtime:   > 90 天的数据，已经被 heat_daily 聚合过，直接删除
+        - 原始 playcount_snapshot: > 90 天的记录同样删除
+        - heat_daily:           > 365 天的日聚合数据归档（可选），保留 1 年供小程序查询
 
-        affected = execute(
-            "DELETE FROM playcount_snapshot WHERE record_time < DATE_SUB(NOW(), INTERVAL 30 DAY)"
+    结果：
+        - 热度原始数据本地最多保留 90 天（~32 MB）
+        - 日聚合数据保留 365 天（~1.5 MB）
+        - 无需依赖七牛云做冷备
+    """
+    logger.info("=== 开始冷数据归档/清理 ===")
+    try:
+        from app.utils.db import execute, query_one
+
+        # 1. 先确认 heat_daily 是否已经覆盖到 90 天前
+        lag = query_one("""
+            SELECT COUNT(*) AS missing FROM heat_realtime h
+            WHERE h.record_time < DATE_SUB(NOW(), INTERVAL 90 DAY)
+              AND NOT EXISTS (
+                SELECT 1 FROM heat_daily d
+                WHERE d.drama_id = h.drama_id AND d.platform_id = h.platform_id
+                  AND d.stat_date = DATE(h.record_time)
+              )
+        """)
+        missing = (lag or {}).get('missing', 0)
+        if missing:
+            logger.warning(f"有 {missing} 条旧热度还未被 heat_daily 聚合，本次不清理，"
+                           f"请检查 daily_calculator 是否正常")
+            return
+
+        # 2. 清理 90 天前的 heat_realtime
+        deleted = execute(
+            "DELETE FROM heat_realtime WHERE record_time < DATE_SUB(NOW(), INTERVAL 90 DAY)"
         )
-        logger.info(f"清理了 {affected} 条过期播放量快照")
+        logger.info(f"清理了 {deleted} 条 90 天前的实时热度")
+
+        # 3. 清理 90 天前的 playcount_snapshot
+        deleted = execute(
+            "DELETE FROM playcount_snapshot WHERE record_time < DATE_SUB(NOW(), INTERVAL 90 DAY)"
+        )
+        logger.info(f"清理了 {deleted} 条 90 天前的播放量快照")
+
+        # 4. 清理超过 1 年的 heat_daily（小程序图表只展示 1 年窗口）
+        deleted = execute(
+            "DELETE FROM heat_daily WHERE stat_date < DATE_SUB(CURDATE(), INTERVAL 365 DAY)"
+        )
+        if deleted:
+            logger.info(f"清理了 {deleted} 条 1 年前的日聚合数据")
 
     except Exception as e:
-        logger.error(f"旧数据清理异常: {e}")
+        logger.error(f"归档任务异常: {e}")
 
 
 def main():
     scheduler = BlockingScheduler(timezone='Asia/Shanghai')
 
-    # 每15分钟：热度采集
-    scheduler.add_job(
-        job_crawl_heat,
+    scheduler.add_job(job_crawl_heat,
         IntervalTrigger(minutes=15),
-        id='crawl_heat',
-        name='热度数据采集',
-        max_instances=1
-    )
+        id='crawl_heat', name='热度数据采集', max_instances=1)
 
-    # 每日00:00：数据清洗
-    scheduler.add_job(
-        job_clean_data,
+    scheduler.add_job(job_clean_data,
         CronTrigger(hour=0, minute=0),
-        id='clean_data',
-        name='数据清洗'
-    )
+        id='clean_data', name='数据清洗')
 
-    # 每日00:30：日度统计计算
-    scheduler.add_job(
-        job_daily_calculate,
+    scheduler.add_job(job_daily_calculate,
         CronTrigger(hour=0, minute=30),
-        id='daily_calculate',
-        name='日度统计计算'
-    )
+        id='daily_calculate', name='日度统计计算')
 
-    # 每日01:00：剧力指数计算
-    scheduler.add_job(
-        job_index_calculate,
+    scheduler.add_job(job_index_calculate,
         CronTrigger(hour=1, minute=0),
-        id='index_calculate',
-        name='剧力指数计算'
-    )
+        id='index_calculate', name='剧力指数计算')
 
-    # 每日01:30：热度异动检测
-    scheduler.add_job(
-        job_detect_anomalies,
+    scheduler.add_job(job_detect_anomalies,
         CronTrigger(hour=1, minute=30),
-        id='detect_anomalies',
-        name='热度异动检测'
-    )
+        id='detect_anomalies', name='热度异动检测')
 
-    # 每日15:00：发布日度数据
-    scheduler.add_job(
-        job_daily_publish,
+    scheduler.add_job(job_daily_publish,
         CronTrigger(hour=15, minute=0),
-        id='daily_publish',
-        name='日度数据发布'
-    )
+        id='daily_publish', name='日度数据发布')
 
-    # 每日03:00：豆瓣评分更新
-    scheduler.add_job(
-        job_crawl_douban,
+    scheduler.add_job(job_crawl_douban,
         CronTrigger(hour=3, minute=0),
-        id='crawl_douban',
-        name='豆瓣评分更新'
-    )
+        id='crawl_douban', name='豆瓣评分更新')
 
-    # 每日04:00：清理旧数据
-    scheduler.add_job(
-        job_clean_old_data,
+    scheduler.add_job(job_archive_old_heat,
         CronTrigger(hour=4, minute=0),
-        id='clean_old_data',
-        name='清理旧数据'
-    )
+        id='archive_old_heat', name='冷数据归档/清理')
 
     logger.info("热剧榜定时任务调度器已启动")
     logger.info(f"已注册 {len(scheduler.get_jobs())} 个定时任务：")
     for job in scheduler.get_jobs():
         logger.info(f"  - {job.name} ({job.trigger})")
 
-    # 启动时立即执行一次热度采集，确保有数据
+    # 启动时立即执行一次热度采集
     logger.info("=== 首次启动，立即执行热度采集 ===")
     job_crawl_heat()
 

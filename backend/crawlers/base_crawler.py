@@ -1,4 +1,11 @@
-import re
+"""
+基础采集器：提供 HTTP fetch、数据库写入、热度去重等通用能力
+
+注意（2026-04 重构）:
+    原来的 _match_drama() / _discover_* 等"自动发现新剧"逻辑已移除。
+    剧集清单现在由管理员通过 /admin 录入到 drama_platforms 表，
+    爬虫只做读表 → 抓热度 → 写库 三件事。
+"""
 import time
 import random
 import requests
@@ -11,8 +18,6 @@ ua = UserAgent()
 class BaseCrawler:
     """基础采集器，所有平台采集器继承此类"""
 
-    _drama_cache = {}
-
     def __init__(self, platform_name):
         self.platform_name = platform_name
         self.session = requests.Session()
@@ -24,8 +29,9 @@ class BaseCrawler:
         })
         self._saved_this_round = set()
 
+    # --- HTTP ---
     def fetch(self, url, params=None, headers=None, retry=3):
-        """带重试的HTTP请求"""
+        """带重试的 HTTP 请求"""
         for i in range(retry):
             try:
                 time.sleep(random.uniform(1, 3))
@@ -44,177 +50,18 @@ class BaseCrawler:
                     return None
 
     def fetch_json(self, url, params=None, headers=None):
-        """请求JSON接口"""
+        """请求 JSON 接口"""
         resp = self.fetch(url, params=params, headers=headers)
         if resp:
             try:
                 return resp.json()
             except Exception as e:
-                logger.error(f"[{self.platform_name}] JSON解析失败: {e}")
+                logger.error(f"[{self.platform_name}] JSON 解析失败: {e}")
         return None
 
-    def _normalize_title(self, title):
-        """标准化标题"""
-        if not title:
-            return ''
-        title = re.sub(r'[（(][^)）]*[)）]', '', title)
-        title = re.sub(r'\s+', '', title)
-        title = title.strip()
-        return title
-
-    def _match_drama(self, title, drama_type='tv_drama', poster_url='',
-                     is_finished=False, air_date=None):
-        """
-        匹配或创建剧集记录。
-        - 如果匹配到已有剧：更新封面(如缺)、更新状态
-        - 如果未匹配到：自动创建(含封面、状态、首播日期)
-        - is_finished=True时，将drama标记为finished，跳过不保存热度
-        返回 drama_id 或 None(已完结剧返回None以跳过)
-        """
-        if not title:
-            return None
-
-        normalized = self._normalize_title(title)
-        if not normalized:
-            return None
-
-        # 如果已明确是完结剧，直接跳过（不写入热度数据）
-        if is_finished:
-            logger.debug(f"[{self.platform_name}] 跳过已完结: {normalized}")
-            # 仍然更新数据库中的状态
-            self._mark_drama_finished(normalized)
-            return None
-
-        if normalized in BaseCrawler._drama_cache:
-            drama_id = BaseCrawler._drama_cache[normalized]
-            if poster_url:
-                self._update_poster_if_empty(drama_id, poster_url)
-            return drama_id
-
-        from app.utils.db import query_one, insert
-
-        try:
-            # 1. 精确匹配
-            row = query_one(
-                "SELECT id, poster_url, status FROM dramas WHERE title = %s LIMIT 1",
-                (normalized,)
-            )
-            if row:
-                drama_id = row['id']
-                BaseCrawler._drama_cache[normalized] = drama_id
-                if poster_url and not row.get('poster_url'):
-                    self._update_poster_if_empty(drama_id, poster_url)
-                # 确保状态为airing
-                if row.get('status') != 'airing':
-                    self._update_status(drama_id, 'airing')
-                return drama_id
-
-            # 2. 模糊匹配
-            row = query_one(
-                "SELECT id, poster_url, status FROM dramas WHERE title LIKE %s LIMIT 1",
-                (f'%{normalized}%',)
-            )
-            if row:
-                drama_id = row['id']
-                BaseCrawler._drama_cache[normalized] = drama_id
-                if poster_url and not row.get('poster_url'):
-                    self._update_poster_if_empty(drama_id, poster_url)
-                if row.get('status') != 'airing':
-                    self._update_status(drama_id, 'airing')
-                return drama_id
-
-            # 3. 反向模糊匹配
-            row = query_one(
-                "SELECT id, title, poster_url, status FROM dramas "
-                "WHERE %s LIKE CONCAT('%%', title, '%%') "
-                "AND CHAR_LENGTH(title) >= 2 ORDER BY CHAR_LENGTH(title) DESC LIMIT 1",
-                (normalized,)
-            )
-            if row:
-                drama_id = row['id']
-                BaseCrawler._drama_cache[normalized] = drama_id
-                if poster_url and not row.get('poster_url'):
-                    self._update_poster_if_empty(drama_id, poster_url)
-                if row.get('status') != 'airing':
-                    self._update_status(drama_id, 'airing')
-                return drama_id
-
-            # 4. 自动创建
-            from datetime import date as date_type
-            actual_air_date = air_date or date_type.today().isoformat()
-
-            drama_id = insert(
-                "INSERT INTO dramas (title, type, status, poster_url, air_date) "
-                "VALUES (%s, %s, 'airing', %s, %s)",
-                (normalized, drama_type, poster_url or None, actual_air_date)
-            )
-            if drama_id:
-                BaseCrawler._drama_cache[normalized] = drama_id
-                logger.info(
-                    f"[{self.platform_name}] 新增在播剧: '{normalized}' -> id={drama_id}"
-                )
-                return drama_id
-
-        except Exception as e:
-            logger.error(f"[{self.platform_name}] 匹配/创建'{normalized}'失败: {e}")
-
-        return None
-
-    def _update_poster_if_empty(self, drama_id, poster_url):
-        """补充缺失的封面URL"""
-        if not poster_url:
-            return
-        try:
-            from app.utils.db import execute
-            execute(
-                "UPDATE dramas SET poster_url = %s WHERE id = %s "
-                "AND (poster_url IS NULL OR poster_url = '')",
-                (poster_url, drama_id)
-            )
-        except Exception:
-            pass
-
-    def _update_status(self, drama_id, status):
-        """更新剧集状态"""
-        try:
-            from app.utils.db import execute
-            execute("UPDATE dramas SET status = %s WHERE id = %s", (status, drama_id))
-        except Exception:
-            pass
-
-    def _mark_drama_finished(self, title):
-        """将已完结剧标记为finished"""
-        try:
-            from app.utils.db import execute
-            execute(
-                "UPDATE dramas SET status = 'finished' WHERE title = %s AND status = 'airing'",
-                (title,)
-            )
-        except Exception:
-            pass
-
-    @classmethod
-    def clear_drama_cache(cls):
-        cls._drama_cache.clear()
-
-    def _save_platform_url(self, drama_id, platform_id, platform_drama_id, platform_url):
-        """保存/更新剧集在平台的URL（供下次采集直接复用）"""
-        if not drama_id or not platform_url:
-            return
-        try:
-            from app.utils.db import execute
-            execute(
-                "INSERT INTO drama_platforms (drama_id, platform_id, platform_drama_id, platform_url) "
-                "VALUES (%s, %s, %s, %s) "
-                "ON DUPLICATE KEY UPDATE platform_drama_id=VALUES(platform_drama_id), "
-                "platform_url=VALUES(platform_url)",
-                (drama_id, platform_id, platform_drama_id or '', platform_url)
-            )
-        except Exception as e:
-            logger.debug(f"[{self.platform_name}] 保存平台URL失败: {e}")
-
+    # --- 去重 ---
     def _has_recent_heat(self, drama_id, platform_id, minutes=10):
-        """检查是否在近N分钟内已保存过该剧的热度（避免同一轮重复采集）"""
+        """检查是否在近 N 分钟内已保存过该剧的热度（防止短时间重复采集）"""
         try:
             from app.utils.db import query_one
             row = query_one(
@@ -227,11 +74,9 @@ class BaseCrawler:
         except Exception:
             return False
 
-    def crawl(self):
-        raise NotImplementedError
-
+    # --- 写库 ---
     def save_heat_data(self, drama_id, platform_id, heat_value, heat_rank=None):
-        """保存热度数据(本轮去重)"""
+        """保存热度数据（本轮内重复调用会被去重）"""
         dedup_key = (drama_id, platform_id)
         if dedup_key in self._saved_this_round:
             return
@@ -247,7 +92,7 @@ class BaseCrawler:
         )
 
     def save_playcount(self, drama_id, platform_id, total_playcount):
-        """保存播放量快照"""
+        """保存播放量快照（芒果 TV 用）"""
         from app.utils.db import insert
         from datetime import datetime
 
@@ -258,7 +103,7 @@ class BaseCrawler:
         )
 
     def log_task(self, task_type, status, records_count=0, error_message=None):
-        """记录采集日志"""
+        """记录采集任务日志"""
         from app.utils.db import insert
         from datetime import datetime
 
@@ -267,3 +112,6 @@ class BaseCrawler:
             "records_count, error_message) VALUES (%s, %s, %s, %s, %s, %s)",
             (task_type, status, datetime.now(), datetime.now(), records_count, error_message)
         )
+
+    def crawl(self):
+        raise NotImplementedError
