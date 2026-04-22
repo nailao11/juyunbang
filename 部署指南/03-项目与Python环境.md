@@ -77,6 +77,8 @@ root@server:/opt/rejubang/backend# python3 -m venv venv
 
 执行完会在当前目录下生成一个 `venv/` 文件夹（里面是一套独立的 Python）。
 
+> ℹ️ **关于 PEP 668**：Debian 12 和 13 都默认开启 PEP 668（`externally-managed-environment`），**直接用系统 pip 装包会被拒绝**。这正是我们用 venv 的原因——venv 里的 pip 不受这个限制。本指南从不要求你往系统 Python 装包，只用 `./venv/bin/pip`。
+
 ```
 root@server:/opt/rejubang/backend# ls
 app  crawlers  gunicorn_config.py  migrations  processors  requirements.txt  run.py  scheduler  test_crawl.py  venv
@@ -122,18 +124,22 @@ root@server:/opt/rejubang/backend# ./venv/bin/pip install -r requirements.txt -i
 ### 3.4 验证依赖装好
 
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip list | grep -E "Flask|playwright|PyMySQL|redis|APScheduler"
+root@server:/opt/rejubang/backend# ./venv/bin/pip list | grep -E "Flask|playwright|PyMySQL|redis|APScheduler|lxml|cryptography"
 ```
 
 应该看到：
 
 ```
 APScheduler       3.10.4
+cryptography      44.0.0
 Flask             3.0.0
-playwright        1.40.0
-PyMySQL           ...
-redis             ...
+lxml              5.3.0
+playwright        1.55.0
+PyMySQL           1.1.0
+redis             5.0.1
 ```
+
+> ℹ️ **2026-04 版本升级说明**：相比早期版本，`playwright / lxml / cryptography` 三个包已经升级以适配 Python 3.13 + Debian 13。如果你 pip list 看到的是 1.40 / 4.9.3 / 41.0.7，说明你 `git pull` 没拉到最新代码，先执行 `git pull origin main` 再重装依赖。
 
 ---
 
@@ -159,7 +165,25 @@ root@server:/opt/rejubang/backend# ./venv/bin/playwright install-deps chromium
 
 ### 4.3 如果 `install-deps` 报错
 
-手动装这些库：
+**先确认系统版本**，然后用对应的命令：
+
+```
+root@server:/opt/rejubang/backend# cat /etc/os-release | grep -E "VERSION_ID|VERSION_CODENAME"
+```
+
+#### 如果是 Debian 13 (Trixie) / Ubuntu 24.04+（包名带 `t64` 后缀）
+
+```
+root@server:/opt/rejubang/backend# apt install -y \
+  libnss3 libnspr4 libdbus-1-3 \
+  libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 \
+  libasound2t64 libcups2t64 libglib2.0-0t64 \
+  libdrm2 libgbm1 libxkbcommon0 libpango-1.0-0 libcairo2 \
+  libxrandr2 libxcomposite1 libxdamage1 libxfixes3 \
+  libx11-6 libxcb1 libxext6
+```
+
+#### 如果是 Debian 12 (Bookworm) / Ubuntu 22.04（老包名）
 
 ```
 root@server:/opt/rejubang/backend# apt install -y \
@@ -169,7 +193,9 @@ root@server:/opt/rejubang/backend# apt install -y \
   libcups2 libgtk-3-0
 ```
 
-> 💡 `apt install` 即使 **当前目录不在 `/opt/rejubang/backend`** 也能执行（`apt` 不依赖当前目录），但保持在这个目录下方便后续继续跑后面的命令。
+> ℹ️ **为什么 Debian 13 改名了？** Debian 13 完成了 "64-bit time_t 迁移"（为 2038 年问题做准备），使用了 64 位 `time_t` ABI 的库都被重命名，加上了 `t64` 后缀，包名直接变了。Ubuntu 24.04 同理。
+>
+> 💡 `apt install` 即使 **当前目录不在 `/opt/rejubang/backend`** 也能执行，保持在这目录方便后续命令。
 
 ### 4.4 快速验证 Playwright 能启动 Chromium
 
