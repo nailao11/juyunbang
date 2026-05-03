@@ -163,7 +163,7 @@ cd /opt/rejubang/backend
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u root -p'RootDB_Pass_2026_NaiLao!'
+mariadb -u root -p'RootDB_Pass_2026_NaiLao!'
 ```
 
 **情况 2**：密码已忘，重设 root 密码：
@@ -175,10 +175,10 @@ mysql -u root -p'RootDB_Pass_2026_NaiLao!'
 systemctl stop mariadb
 
 # 以跳过权限检查的方式启动
-mysqld_safe --skip-grant-tables &
+mariadbd-safe --skip-grant-tables &
 
 # 登录（无密码）
-mysql -u root
+mariadb -u root
 
 # 在 MariaDB 里执行
 MariaDB [(none)]> FLUSH PRIVILEGES;
@@ -186,7 +186,7 @@ MariaDB [(none)]> ALTER USER 'root'@'localhost' IDENTIFIED BY 'RootDB_Pass_2026_
 MariaDB [(none)]> EXIT;
 
 # 杀掉 safe 模式进程
-pkill mysqld
+pkill mariadbd
 
 # 正常重启
 systemctl start mariadb
@@ -213,7 +213,7 @@ systemctl restart rejubang-api rejubang-crawler
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
+mariadb -u root -p'RootDB_Pass_2026_NaiLao!' -e "
 ALTER USER 'rejubang'@'localhost' IDENTIFIED BY 'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA';
 FLUSH PRIVILEGES;
 "
@@ -388,7 +388,7 @@ tail -100 /opt/rejubang/logs/scheduler_$(date +%Y-%m-%d).log
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mariadb -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 SELECT title, air_date, status FROM dramas
 WHERE air_date > DATE_SUB(NOW(), INTERVAL 30 DAY)
 LIMIT 20;
@@ -552,7 +552,7 @@ rm /etc/systemd/system/rejubang-crawler.service
 systemctl daemon-reload
 
 # 先备份再删
-mysqldump -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' --single-transaction rejubang > /opt/backup/FINAL_BACKUP.sql
+mariadb-dump -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' --single-transaction rejubang > /opt/backup/FINAL_BACKUP.sql
 
 rm -rf /opt/rejubang
 ```
@@ -562,7 +562,7 @@ rm -rf /opt/rejubang
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE rejubang; DROP USER 'rejubang'@'localhost';"
+mariadb -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE rejubang; DROP USER 'rejubang'@'localhost';"
 ```
 
 ---
@@ -651,7 +651,7 @@ grep ADMIN_TOKEN /opt/rejubang/backend/.env
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mariadb -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 SELECT d.title, p.short_name, h.heat_value, h.record_time
 FROM heat_realtime h
 JOIN dramas d ON h.drama_id=d.id
@@ -678,7 +678,7 @@ ORDER BY h.record_time DESC;
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mariadb -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 UPDATE dramas SET status='finished' WHERE title='剧名';
 "
 ```
@@ -701,7 +701,7 @@ UPDATE dramas SET status='finished' WHERE title='剧名';
 📍 **位置**：云服务器 · 当前目录 `/root`
 
 ```
-mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
+mariadb -u root -p'RootDB_Pass_2026_NaiLao!' -e "
 SELECT table_name, ROUND(data_length/1024/1024,2) AS data_mb,
        ROUND(index_length/1024/1024,2) AS idx_mb, table_rows
 FROM information_schema.tables
