@@ -11,11 +11,11 @@
     # 2. 对 drama_platforms 表里的所有在播剧跑一轮完整采集（写入数据库）
     ./venv/bin/python test_crawl.py --run
 
-    # 3. 测试单条 URL 的热度提取（不写库，不依赖数据库）
-    ./venv/bin/python test_crawl.py --test-url tencent https://v.qq.com/x/cover/mzc002006dzzunf.html
-    ./venv/bin/python test_crawl.py --test-url iqiyi   v_pz64qf5dtk
-    ./venv/bin/python test_crawl.py --test-url youku   https://m.youku.com/alipay_video/id_ccdb02ca7e5249ccbb3e.html
-    ./venv/bin/python test_crawl.py --test-url mgtv    742534/25318094
+    # 3. 测试单条完整页面 URL 的热度提取（不写库，不依赖数据库）
+    ./venv/bin/python test_crawl.py --test-url tencent 'https://m.v.qq.com/x/m/play?cid=mzc002007tp60ap&vid=w41025my54z'
+    ./venv/bin/python test_crawl.py --test-url iqiyi   'https://www.iqiyi.com/a_1euk1nkfz9l.html'
+    ./venv/bin/python test_crawl.py --test-url youku   'https://v.youku.com/v_show/id_XMTgyMDM5NTEyMA==.html'
+    ./venv/bin/python test_crawl.py --test-url mgtv    'https://www.mgtv.com/b/742534/25318094.html'
 
     # 4. 查看当前数据库里已录入的剧
     ./venv/bin/python test_crawl.py --list
@@ -96,7 +96,17 @@ def test_single_url(platform, raw_input):
         print(f"✓ {label}: {value}")
     else:
         print(f"✗ 未提取到数值")
-        print(f"  可能原因：1) 平台页面改版；2) 被反爬；3) URL 不对；4) 该剧真的没热度")
+
+    debug = crawler.get_last_debug()
+    if debug:
+        print("  -- debug --")
+        for k in ('source_type', 'match_pattern', 'matched_snippet', 'final_url'):
+            v = debug.get(k)
+            if v is not None:
+                print(f"  {k}: {v}")
+        errs = debug.get('errors') or []
+        if errs:
+            print(f"  errors: {' | '.join(str(e) for e in errs)}")
 
 
 def run_full_crawl():

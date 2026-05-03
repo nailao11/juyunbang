@@ -1,22 +1,16 @@
 """
-热剧榜 — 在播剧热度采集器（半自动架构 v5）
+热剧榜 — 在播剧热度采集器（半自动）
 
-架构说明（2026-04 重构）:
-    本版本抛弃了"自动发现新剧"的复杂链路，改为纯被动采集：
-      1. 在播剧清单由管理员通过 Web 后台录入到 drama_platforms 表
-      2. 本爬虫只负责：读取清单 → 挨个访问详情页 → 提取热度值 → 入库
-      3. 旧版的 _discover_tencent/iqiyi/youku/mgtv_dramas() 全部删除
+工作流：
+    1. 管理员通过 /admin 录入完整页面链接到 drama_platforms 表
+    2. APScheduler 每 15 分钟调用 AiringCrawler.crawl()
+    3. 按 short_name 分发到对应平台的提取函数 → 入库
 
-为什么做这个改造:
-    各平台（尤其爱奇艺、优酷）的"新剧发现"API 字段结构不稳定，
-    旧版代码已被验证存在致命 bug（爱奇艺/芒果TV 发现数恒为 0）。
-    半自动架构让爬虫逻辑简化 60%，单点失败只影响单部剧的单平台。
-
-热度提取方式（保留）:
-    腾讯视频: 移动端 m.v.qq.com/x/cover/{cid}.html  → "XXXXX 热度"
-    爱奇艺:   PC 端 www.iqiyi.com/{短码}.html       → "热度 XXXXX"
-    优酷:     PC 端 v.youku.com/v_show/id_{showid}.html → "XXXXX 热度"
-    芒果TV:   移动端 m.mgtv.com/b/{partId}/{clipId}.html → "X.X亿次播放"
+四个平台采集口径：
+    腾讯视频   m.v.qq.com/x/m/play?cid=...&vid=...    body innerText 匹配 "热度"
+    爱奇艺     www.iqiyi.com/a_xxx.html               base_info JSON.heat / label[red]
+    优酷       v.youku.com/v_show/id_xxx.html         body innerText + HTML 兜底
+    芒果TV     www.mgtv.com/b/{partId}/{clipId}.html  body innerText 匹配 "亿/万次播放"
 """
 
 import re
@@ -29,10 +23,8 @@ from .browser_helper import BrowserHelper
 
 
 class AiringCrawler(BaseCrawler):
-    """在播剧热度采集器（读 drama_platforms 表）"""
+    """读 drama_platforms 表，按平台分发到对应提取函数"""
 
-    # 平台 short_name → 提取函数 映射（短名来自 platforms 表）
-    # 提取函数签名: (browser, url) -> float
     PLATFORM_EXTRACTORS = {
         'tencent': '_extract_tencent_heat',
         'iqiyi':   '_extract_iqiyi_heat',
@@ -42,12 +34,34 @@ class AiringCrawler(BaseCrawler):
 
     def __init__(self):
         super().__init__('AiringCrawler')
+        self._last_debug = {}
 
+    # ---- debug ----
+    def _set_debug(self, **kwargs):
+        """记录最近一次提取的诊断信息，供 /admin/test_extract 展示"""
+        self._last_debug = kwargs
+
+    def get_last_debug(self):
+        return dict(self._last_debug)
+
+    @staticmethod
+    def _new_debug(platform, url, page_kind):
+        return {
+            'platform': platform,
+            'input_url': url,
+            'final_url': url,
+            'page_kind': page_kind,
+            'source_type': None,
+            'match_pattern': None,
+            'matched_snippet': None,
+            'errors': [],
+        }
+
+    # ---- 主流程 ----
     def crawl(self):
-        """读取 drama_platforms，对每条 (剧 × 平台) 采集热度"""
         from app.utils.db import query
 
-        logger.info("[AiringCrawler] 开始采集")
+        logger.info('[AiringCrawler] 开始采集')
 
         rows = query("""
             SELECT dp.drama_id, dp.platform_id, dp.platform_drama_id, dp.platform_url,
@@ -63,12 +77,11 @@ class AiringCrawler(BaseCrawler):
         """)
 
         if not rows:
-            logger.warning("[AiringCrawler] drama_platforms 表无在播剧。"
-                           "请通过管理后台 /admin 录入。")
+            logger.warning('[AiringCrawler] drama_platforms 无在播剧，请通过 /admin 录入')
             self.log_task('airing_heat', 'success', 0, '无在播剧记录')
             return 0
 
-        logger.info(f"[AiringCrawler] 待采集 {len(rows)} 条记录")
+        logger.info(f'[AiringCrawler] 待采集 {len(rows)} 条记录')
         saved = 0
         failed = 0
 
@@ -89,7 +102,6 @@ class AiringCrawler(BaseCrawler):
 
                     if value and value > 0:
                         if row['platform'] == 'mgtv':
-                            # 芒果TV: 播放量写 playcount_snapshot + heat_realtime（替代热度）
                             self.save_playcount(row['drama_id'], row['platform_id'], int(value))
                         self.save_heat_data(row['drama_id'], row['platform_id'], value)
                         saved += 1
@@ -98,7 +110,6 @@ class AiringCrawler(BaseCrawler):
                         failed += 1
                         logger.warning(f"  [✗] {row['title']}@{row['platform']}: 未提取到热度")
 
-                    # 礼貌延时，避免触发反爬
                     time.sleep(random.uniform(0.8, 2.0))
 
                 except Exception as e:
@@ -107,114 +118,200 @@ class AiringCrawler(BaseCrawler):
 
         self.log_task('airing_heat', 'success', saved,
                       f'成功 {saved}，失败 {failed}' if failed else None)
-        logger.info(f"[AiringCrawler] 完成: 保存 {saved} 条，失败 {failed} 条")
+        logger.info(f'[AiringCrawler] 完成: 保存 {saved} 条，失败 {failed} 条')
         return saved
 
     # ================================================================
-    # 各平台热度提取函数（保持原实现，经实测仍有效）
+    # 腾讯视频：移动播放页 body innerText
     # ================================================================
-
     def _extract_tencent_heat(self, browser, url):
-        """腾讯视频移动端 cover 页提取热度值"""
-        # 如果传入的是 PC 端 URL，自动转成移动端
-        url = url.replace('v.qq.com/x/cover', 'm.v.qq.com/x/cover', 1) \
-                 .replace('//v.qq.com', '//m.v.qq.com', 1)
-
-        html = browser.get_html(
-            url, mobile=True, timeout=15000,
-            close_selectors=['.mod_guide_box .btn_close', '.download_tips .btn_close']
+        debug = self._new_debug('tencent', url, 'mobile_play')
+        text = browser.get_rendered_text(
+            url, mobile=True, timeout=20000,
+            close_selectors=['.mod_guide_box .btn_close', '.download_tips .btn_close'],
+            wait_after_ms=2000,
         )
-        if not html:
+        if not text:
+            debug['errors'].append('rendered text empty')
+            self._set_debug(**debug)
             return 0
 
-        for pattern in [
-            r'(\d[\d,]{2,})\s*热度',
-            r'热度[：:]\s*(\d[\d,]{2,})',
-            r'"heatScore"\s*:\s*"?(\d+)"?',
-            r'"hot_val"\s*:\s*"?(\d+)"?',
-        ]:
-            m = re.search(pattern, html)
+        patterns = [
+            (r'站内热度\s*([0-9]{2,9})',          'site_heat'),
+            (r'([0-9]{2,9})\s*热度',              'num_then_heat'),
+            (r'热度\s*[:：]?\s*([0-9]{2,9})',     'heat_then_num'),
+        ]
+        for pat, name in patterns:
+            m = re.search(pat, text)
             if m:
-                try:
-                    return float(m.group(1).replace(',', ''))
-                except ValueError:
-                    continue
-        return 0
-
-    def _extract_iqiyi_heat(self, browser, url):
-        """爱奇艺 PC 端详情页提取热度（自动关闭广告弹窗）"""
-        html = browser.get_html(
-            url, mobile=False, timeout=20000,
-            close_selectors=[
-                '.iqp-dialog .iqp-dialog-close',
-                '.close-btn',
-                '.qy-mod-close',
-                '[class*="dialog-close"]',
-                '[class*="ad-close"]',
-            ]
-        )
-        if not html:
-            return 0
-
-        for pattern in [
-            r'热度[^\d]{0,10}(\d{2,8})',
-            r'(\d{2,8})\s*热度',
-            r'hot[^\d]{0,10}(\d{2,8})',
-            r'"hot"\s*:\s*"?(\d+)"?',
-            r'"heatScore"\s*:\s*"?(\d+)"?',
-            r'"heat"\s*:\s*"?(\d+)"?',
-        ]:
-            m = re.search(pattern, html)
-            if m:
+                debug.update({
+                    'source_type': 'rendered_text',
+                    'match_pattern': name,
+                    'matched_snippet': m.group(0).strip(),
+                })
+                self._set_debug(**debug)
                 try:
                     return float(m.group(1))
                 except ValueError:
                     continue
+
+        debug['errors'].append('no heat pattern matched')
+        self._set_debug(**debug)
         return 0
 
-    def _extract_youku_heat(self, browser, url):
-        """优酷 PC 端详情页提取热度"""
-        html = browser.get_html(
-            url, mobile=False, timeout=20000,
-            close_selectors=['[class*="close"]', '.close-btn']
+    # ================================================================
+    # 爱奇艺：base_info 接口 JSON
+    # ================================================================
+    def _extract_iqiyi_heat(self, browser, url):
+        debug = self._new_debug('iqiyi', url, 'pc_album')
+
+        data, meta = browser.capture_first_json_response(
+            url,
+            url_keyword='mesh.if.iqiyi.com/tvg/v2/lw/base_info',
+            mobile=False,
+            timeout=30000,
+            extra_headers={
+                'Referer': 'https://www.iqiyi.com/',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            },
+            wait_after_ms=5000,
+            scroll=True,
         )
-        if not html:
+        if meta.get('final_url'):
+            debug['final_url'] = meta['final_url']
+        if meta.get('errors'):
+            debug['errors'].extend(meta['errors'])
+        if not data:
+            debug['errors'].append('base_info response not captured')
+            self._set_debug(**debug)
             return 0
 
-        for pattern in [
-            r'(\d[\d,]{2,8})\s*热度',
-            r'热度[^\d]{0,10}(\d[\d,]{2,8})',
-            r'热度破[^\d]{0,5}(\d[\d,]{2,8})',
-            r'"heat"\s*:\s*"?(\d+)"?',
-            r'"hotValue"\s*:\s*"?(\d+)"?',
-        ]:
-            m = re.search(pattern, html)
-            if m:
-                try:
-                    return float(m.group(1).replace(',', ''))
-                except ValueError:
-                    continue
+        base = (data.get('data') or {}).get('base_data') or {}
+
+        # 1) 优先 base_data.heat
+        heat = base.get('heat')
+        if heat not in (None, '', 0, '0'):
+            try:
+                v = float(heat)
+                if v > 0:
+                    debug.update({
+                        'source_type': 'base_info_heat',
+                        'match_pattern': 'data.base_data.heat',
+                        'matched_snippet': str(int(v)) if v == int(v) else str(v),
+                    })
+                    self._set_debug(**debug)
+                    return v
+            except (TypeError, ValueError):
+                pass
+
+        # 2) 退而取 base_data.label 中 style=red 的纯数字 txt
+        for item in (base.get('label') or []):
+            try:
+                if item.get('style') == 'red':
+                    txt = str(item.get('txt', '')).strip()
+                    if txt.isdigit():
+                        debug.update({
+                            'source_type': 'base_info_label',
+                            'match_pattern': 'data.base_data.label[red]',
+                            'matched_snippet': txt,
+                        })
+                        self._set_debug(**debug)
+                        return float(txt)
+            except Exception:
+                continue
+
+        debug['errors'].append('heat not found in base_info')
+        self._set_debug(**debug)
         return 0
 
+    # ================================================================
+    # 优酷：PC 播放页 body innerText，HTML 兜底
+    # ================================================================
+    def _extract_youku_heat(self, browser, url):
+        debug = self._new_debug('youku', url, 'pc_play')
+
+        text = browser.get_rendered_text(
+            url, mobile=False, timeout=20000,
+            close_selectors=['[class*="close"]', '.close-btn'],
+            wait_after_ms=1500,
+        )
+        if text:
+            patterns = [
+                (r'热度\s*破?\s*([0-9]{2,9})',     'heat_break'),
+                (r'热度\s*[:：]?\s*([0-9]{2,9})',  'heat_then_num'),
+                (r'([0-9]{2,9})\s*热度',           'num_then_heat'),
+            ]
+            for pat, name in patterns:
+                m = re.search(pat, text)
+                if m:
+                    debug.update({
+                        'source_type': 'rendered_text',
+                        'match_pattern': name,
+                        'matched_snippet': m.group(0).strip(),
+                    })
+                    self._set_debug(**debug)
+                    try:
+                        return float(m.group(1))
+                    except ValueError:
+                        continue
+
+        # HTML 兜底（仅取 JSON 字段，避免大段无关 HTML）
+        html = browser.get_html(url, mobile=False, timeout=20000)
+        if html:
+            for pat, name in [
+                (r'"heat"\s*:\s*"?([0-9]{2,9})"?',     'json_heat'),
+                (r'"hotValue"\s*:\s*"?([0-9]{2,9})"?', 'json_hotValue'),
+            ]:
+                m = re.search(pat, html)
+                if m:
+                    debug.update({
+                        'source_type': 'html_json',
+                        'match_pattern': name,
+                        'matched_snippet': m.group(0)[:60],
+                    })
+                    self._set_debug(**debug)
+                    try:
+                        return float(m.group(1))
+                    except ValueError:
+                        continue
+
+        debug['errors'].append('no heat pattern matched')
+        self._set_debug(**debug)
+        return 0
+
+    # ================================================================
+    # 芒果TV：body innerText 匹配播放量（无热度概念，用播放量替代 heat_realtime）
+    # ================================================================
     def _extract_mgtv_playcount(self, browser, url):
-        """
-        芒果TV 提取播放量（无热度概念，用播放量替代）
-        显示格式: "X.X亿次播放" / "XXXX万次播放" / "XXXX次播放"
-        """
-        # 芒果 TV 移动端展示更完整，PC 端也可
-        html = browser.get_html(url, mobile=True, timeout=15000)
-        if not html:
+        debug = self._new_debug('mgtv', url, 'page')
+
+        text = browser.get_rendered_text(
+            url, mobile=True, timeout=20000, wait_after_ms=1500,
+        )
+        if not text:
+            debug['errors'].append('rendered text empty')
+            self._set_debug(**debug)
             return 0
 
-        for pat, mult in [
-            (r'(\d+(?:\.\d+)?)\s*亿\s*次?\s*播放', 100000000),
-            (r'(\d+(?:\.\d+)?)\s*万\s*次?\s*播放', 10000),
-            (r'(\d[\d,]{2,})\s*次\s*播放', 1),
-        ]:
-            m = re.search(pat, html)
+        patterns = [
+            (r'(\d+(?:\.\d+)?)\s*亿\s*次?\s*播放', 100000000, 'yi'),
+            (r'(\d+(?:\.\d+)?)\s*万\s*次?\s*播放', 10000,     'wan'),
+            (r'(\d[\d,]{2,})\s*次\s*播放',         1,         'ci'),
+        ]
+        for pat, mult, name in patterns:
+            m = re.search(pat, text)
             if m:
+                debug.update({
+                    'source_type': 'rendered_text',
+                    'match_pattern': name,
+                    'matched_snippet': m.group(0).strip(),
+                })
+                self._set_debug(**debug)
                 try:
                     return float(m.group(1).replace(',', '')) * mult
                 except ValueError:
                     continue
+
+        debug['errors'].append('no playcount pattern matched')
+        self._set_debug(**debug)
         return 0

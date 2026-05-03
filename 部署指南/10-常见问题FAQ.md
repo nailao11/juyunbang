@@ -590,7 +590,7 @@ ORDER BY h.record_time DESC;
 
 ```
 root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
-UPDATE dramas SET status='finished' WHERE title='蜜语纪';
+UPDATE dramas SET status='finished' WHERE title='剧名';
 "
 ```
 

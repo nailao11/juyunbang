@@ -2,24 +2,22 @@
 管理后台（剧集录入）
 
 路由:
-    GET  /admin                         → 登录页/管理面板 HTML
-    POST /admin/login                   → 提交 ADMIN_TOKEN，换 Cookie
-    POST /admin/logout                  → 清 Cookie
-    GET  /admin/dramas                  → 当前在播剧列表（JSON）
-    POST /admin/dramas                  → 新增/更新一部剧（JSON 或表单）
-    POST /admin/dramas/<id>/delete      → 下架（设为 finished）
-    POST /admin/dramas/<id>/reair       → 重新上架（设为 airing）
-    POST /admin/test_extract            → 测试单条 URL 的热度提取（不入库）
+    GET  /admin                         登录页/管理面板 HTML
+    POST /admin/login                   提交 ADMIN_TOKEN，换 Cookie
+    POST /admin/logout                  清 Cookie
+    GET  /admin/dramas                  当前剧集列表（JSON）
+    POST /admin/dramas                  新增/更新一部剧
+    POST /admin/dramas/<id>/delete      下架（设为 finished）
+    POST /admin/dramas/<id>/reair       重新上架（设为 airing）
+    POST /admin/test_extract            测试单条 URL 的热度提取（不入库），返回 debug 字段
 
-认证:
-    用 .env 里的 ADMIN_TOKEN 做简单 token 认证。登录后写 HttpOnly Cookie，
-    后续请求通过 Cookie 验证。不需要微信登录。
+认证：使用 .env 里的 ADMIN_TOKEN，登录后写 HttpOnly Cookie。
 """
 
 import os
 from functools import wraps
 from datetime import date
-from flask import Blueprint, request, jsonify, make_response, render_template_string
+from flask import Blueprint, request, jsonify, make_response
 
 from ..config import Config
 from ..utils.db import query, query_one, execute, insert
@@ -28,10 +26,6 @@ from ..utils.platform_url import parse_multi, parse_platform_input, normalize_pl
 
 admin_bp = Blueprint('admin', __name__)
 
-
-# ================================================================
-# 认证
-# ================================================================
 
 COOKIE_NAME = 'rejubang_admin'
 
@@ -42,13 +36,11 @@ def _expected_token():
 
 
 def require_admin(fn):
-    """装饰器：验证请求带了合法的 ADMIN_TOKEN"""
     @wraps(fn)
     def wrapper(*args, **kwargs):
         expected = _expected_token()
         if not expected:
-            return jsonify({'code': 500,
-                            'msg': 'ADMIN_TOKEN 未配置，无法使用管理后台'}), 500
+            return jsonify({'code': 500, 'msg': 'ADMIN_TOKEN 未配置'}), 500
         got = request.cookies.get(COOKIE_NAME) \
             or request.headers.get('X-Admin-Token') \
             or request.args.get('token')
@@ -83,14 +75,9 @@ def admin_logout():
     return resp
 
 
-# ================================================================
-# 剧集录入
-# ================================================================
-
 @admin_bp.route('/dramas', methods=['GET'])
 @require_admin
 def list_dramas():
-    """列出所有在播剧 + 已配置的平台清单"""
     rows = query("""
         SELECT d.id, d.title, d.status, d.air_date, d.poster_url,
                GROUP_CONCAT(p.short_name ORDER BY p.sort_order SEPARATOR ',') AS platforms,
@@ -104,7 +91,6 @@ def list_dramas():
         ORDER BY d.status = 'airing' DESC, d.air_date DESC
         LIMIT 200
     """)
-    # 把日期/时间对象转字符串
     for r in rows:
         if r.get('air_date'):
             r['air_date'] = r['air_date'].isoformat()
@@ -116,7 +102,7 @@ def list_dramas():
 @admin_bp.route('/dramas', methods=['POST'])
 @require_admin
 def add_drama():
-    """新增或更新一部剧（按标题 upsert）"""
+    """新增/更新一部剧（按标题 upsert）"""
     data = request.get_json(silent=True) or request.form
     title = (data.get('title') or '').strip()
     if not title:
@@ -127,21 +113,20 @@ def add_drama():
     drama_type = (data.get('type') or 'tv_drama').strip()
     synopsis = (data.get('synopsis') or '').strip() or None
 
-    # 收集各平台输入（支持 URL 或裸 ID）
     platform_inputs = {
         'tencent': (data.get('tencent') or '').strip(),
         'iqiyi':   (data.get('iqiyi')   or '').strip(),
         'youku':   (data.get('youku')   or '').strip(),
         'mgtv':    (data.get('mgtv')    or '').strip(),
     }
-
     parsed, errors = parse_multi(platform_inputs)
     if not parsed:
-        return jsonify({'code': 400,
-                        'msg': '至少需要一个平台的有效 URL/ID',
-                        'errors': errors}), 400
+        return jsonify({
+            'code': 400,
+            'msg': '至少需要一个平台的完整页面链接',
+            'errors': errors,
+        }), 400
 
-    # 查/建 drama
     existing = query_one("SELECT id FROM dramas WHERE title = %s LIMIT 1", (title,))
     if existing:
         drama_id = existing['id']
@@ -156,7 +141,6 @@ def add_drama():
             VALUES (%s, %s, 'airing', %s, %s, %s)""",
             (title, drama_type, air_date, poster_url, synopsis))
 
-    # 查询平台 ID 映射
     plat_rows = query("SELECT id, short_name FROM platforms")
     plat_map = {r['short_name']: r['id'] for r in plat_rows}
 
@@ -178,14 +162,13 @@ def add_drama():
         'code': 0,
         'msg': '已保存',
         'data': {'drama_id': drama_id, 'title': title,
-                 'linked': linked, 'warnings': errors}
+                 'linked': linked, 'warnings': errors},
     })
 
 
 @admin_bp.route('/dramas/<int:drama_id>/delete', methods=['POST'])
 @require_admin
 def delete_drama(drama_id):
-    """下架：把剧标记为 finished（不删数据）"""
     execute("UPDATE dramas SET status='finished' WHERE id=%s", (drama_id,))
     return jsonify({'code': 0, 'msg': '已下架'})
 
@@ -193,7 +176,6 @@ def delete_drama(drama_id):
 @admin_bp.route('/dramas/<int:drama_id>/reair', methods=['POST'])
 @require_admin
 def reair_drama(drama_id):
-    """重新上架"""
     execute("UPDATE dramas SET status='airing' WHERE id=%s", (drama_id,))
     return jsonify({'code': 0, 'msg': '已上架'})
 
@@ -201,7 +183,7 @@ def reair_drama(drama_id):
 @admin_bp.route('/test_extract', methods=['POST'])
 @require_admin
 def test_extract():
-    """测试：对给定 URL 或 ID 立即启动 Playwright 提取一次热度（不入库）"""
+    """对给定完整页面链接立即跑一次提取（不入库），返回 value + debug。"""
     data = request.get_json(silent=True) or request.form
     platform = normalize_platform(data.get('platform'))
     raw = (data.get('url') or '').strip()
@@ -211,7 +193,10 @@ def test_extract():
 
     drama_id, url = parse_platform_input(platform, raw)
     if not url:
-        return jsonify({'code': 400, 'msg': f'无法从输入中解析出 {platform} 的 ID'}), 400
+        return jsonify({
+            'code': 400,
+            'msg': f'{platform}: 请填写完整页面链接',
+        }), 400
 
     from crawlers.browser_helper import BrowserHelper
     from crawlers.airing_crawler import AiringCrawler
@@ -221,104 +206,157 @@ def test_extract():
     if not extractor_name:
         return jsonify({'code': 400, 'msg': f'{platform} 不支持热度提取'}), 400
 
+    value = 0
+    error = None
     try:
         with BrowserHelper(headless=True) as browser:
             extractor = getattr(crawler, extractor_name)
             value = extractor(browser, url)
     except Exception as e:
-        return jsonify({'code': 500, 'msg': f'提取异常: {e}'}), 500
+        error = f'{type(e).__name__}: {e}'
+
+    debug = crawler.get_last_debug()
+    if error:
+        debug.setdefault('errors', []).append(error)
 
     return jsonify({
         'code': 0,
-        'msg': '提取完成' if value else '未提取到数值（平台页面可能改版或有反爬）',
+        'msg': '提取完成' if value else '未提取到数值',
         'data': {
             'platform': platform,
             'url': url,
             'platform_drama_id': drama_id,
             'value': value,
-        }
+            'debug': debug,
+        },
     })
 
 
 # ================================================================
-# 管理面板 HTML
+# 管理面板 HTML（响应式卡片布局）
 # ================================================================
 
-ADMIN_HTML = r"""
-<!DOCTYPE html>
+ADMIN_HTML = r"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>热剧榜 · 管理后台</title>
+<title>神奇奶酪 · 热剧榜管理后台</title>
 <style>
   * { box-sizing: border-box; }
-  body { font: 14px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;
-         background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-         margin: 0; padding: 0; min-height: 100vh; color: #333; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
-  h1 { color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.2); font-size: 28px; margin: 0 0 6px; }
-  .sub { color: rgba(255,255,255,.9); margin: 0 0 24px; }
-  .card { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 20px;
-          box-shadow: 0 4px 20px rgba(0,0,0,.08); }
-  .card h2 { margin: 0 0 16px; font-size: 18px; color: #333; }
-  label { display: block; margin: 10px 0 4px; font-weight: 600; color: #555; font-size: 13px; }
-  input, textarea, select {
-    width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
-    font-size: 14px; font-family: inherit; transition: border-color .2s;
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    font: 14px/1.55 -apple-system,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    color: #2a2a3a; min-height: 100vh; padding: 24px 16px 80px;
   }
-  input:focus, textarea:focus { outline: none; border-color: #667eea; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { color: #fff; font-size: 24px; margin: 4px 0 6px; text-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .sub { color: rgba(255,255,255,.85); margin: 0 0 22px; font-size: 13px; }
+  .sub code { background: rgba(255,255,255,.18); padding: 1px 6px; border-radius: 4px; }
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .card { background: #fff; border-radius: 14px; padding: 22px;
+          box-shadow: 0 6px 22px rgba(0,0,0,.10); margin-bottom: 18px; }
+  .card h2 { margin: 0 0 14px; font-size: 17px; color: #333; display: flex; align-items: center; gap: 8px; }
+  .card h2 .ico { display: inline-flex; width: 26px; height: 26px; border-radius: 8px;
+                  background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; font-size:14px;
+                  align-items: center; justify-content: center; }
+  label { display: block; margin: 12px 0 4px; font-weight: 600; color: #555; font-size: 13px; }
+  input, textarea, select {
+    width: 100%; padding: 9px 12px; border: 1px solid #dde2ea; border-radius: 8px;
+    font-size: 14px; font-family: inherit; transition: border-color .15s, box-shadow .15s;
+    background: #fafbfc;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.15); background: #fff;
+  }
+  textarea { resize: vertical; min-height: 60px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
-  button { background: #667eea; color: #fff; border: 0; padding: 10px 20px;
-           border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
-           transition: background .2s; }
-  button:hover { background: #5a6fd6; }
-  button.secondary { background: #6c757d; }
-  button.danger { background: #e74c3c; }
-  button.small { padding: 6px 12px; font-size: 12px; }
-  .hint { color: #888; font-size: 12px; margin-top: 4px; }
-  .result { margin-top: 16px; padding: 12px; border-radius: 8px; white-space: pre-wrap;
-            font-family: Menlo,Consolas,monospace; font-size: 13px; }
-  .ok { background: #d4edda; color: #155724; }
-  .err { background: #f8d7da; color: #721c24; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #eee; }
-  th { background: #f8f9fa; font-weight: 600; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px;
-           font-size: 11px; margin-right: 4px; color: #fff; }
+  .grid-platforms { display: grid; grid-template-columns: 1fr; gap: 4px; }
+  @media (min-width: 720px) { .grid-platforms { grid-template-columns: 1fr 1fr; gap: 14px; } }
+  .hint { color: #888; font-size: 12px; margin-top: 4px; line-height: 1.5; }
+  .btn { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; border: 0;
+         padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+         transition: transform .12s ease, box-shadow .15s ease; }
+  .btn:hover { box-shadow: 0 4px 14px rgba(102,126,234,.4); }
+  .btn:active { transform: translateY(1px); }
+  .btn.secondary { background: #6c757d; }
+  .btn.danger { background: #e74c3c; }
+  .btn.small { padding: 6px 14px; font-size: 12px; }
+  .btn-row { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .result { margin-top: 14px; padding: 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-all;
+            font-family: ui-monospace,Menlo,Consolas,monospace; font-size: 12.5px; line-height: 1.55; }
+  .result.ok { background: #e8f7ee; color: #185c2c; border-left: 3px solid #2dce89; }
+  .result.err { background: #fdecee; color: #6f1c24; border-left: 3px solid #e74c3c; }
+  .result.info { background: #eef2ff; color: #2d3a76; border-left: 3px solid #667eea; }
+
+  /* 在播剧清单：响应式卡片 */
+  .drama-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 720px) { .drama-grid { grid-template-columns: 1fr 1fr; } }
+  .drama-row { border: 1px solid #eef0f4; border-radius: 10px; padding: 12px 14px;
+               display: flex; flex-direction: column; gap: 6px; background: #fcfcfd; }
+  .drama-row .dname { font-weight: 700; font-size: 15px; color: #2a2a3a; word-break: break-all; }
+  .drama-row .dmeta { color: #777; font-size: 12px; }
+  .drama-row .dplats { display: flex; flex-wrap: wrap; gap: 6px; }
+  .drama-row .dactions { display: flex; gap: 8px; margin-top: 4px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 11px; font-size: 11px;
+           color: #fff; line-height: 1.6; }
   .p-tencent { background: #12b7f5; }
-  .p-iqiyi { background: #00a862; }
-  .p-youku { background: #ff6600; }
-  .p-mgtv { background: #ff5f00; }
-  #loginCard { max-width: 420px; margin: 60px auto; }
+  .p-iqiyi   { background: #00a862; }
+  .p-youku   { background: #ff6600; }
+  .p-mgtv    { background: #ff5f00; }
+  .status-pill { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px;
+                 background: #e8eaf2; color: #555; }
+  .status-pill.airing { background: #e8f7ee; color: #185c2c; }
+  .status-pill.finished { background: #f1f3f8; color: #888; }
+
+  /* 测试结果展示 */
+  .debug-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+  .debug-table th, .debug-table td { padding: 6px 10px; border-bottom: 1px solid #eef0f4;
+                                     text-align: left; vertical-align: top; word-break: break-all; }
+  .debug-table th { background: #f5f6fa; font-weight: 600; color: #555; width: 32%; }
+
+  /* 登录卡 */
+  #loginCard { max-width: 420px; margin: 60px auto 0; }
+  #loginCard input { font-size: 15px; }
+
+  /* 顶部退出按钮 */
+  .quick-actions { display: flex; gap: 8px; align-items: center; }
+  footer { text-align: center; color: rgba(255,255,255,.7); font-size: 12px; margin-top: 24px; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <div id="loginView" style="display:none">
-  <h1>热剧榜 · 管理后台</h1>
-  <p class="sub">请输入 ADMIN_TOKEN 登录（.env 中配置）</p>
+  <h1>神奇奶酪 · 热剧榜管理后台</h1>
+  <p class="sub">请输入 <code>ADMIN_TOKEN</code> 登录</p>
   <div class="card" id="loginCard">
     <label>Admin Token</label>
     <input type="password" id="tokenInput" placeholder="粘贴 .env 中的 ADMIN_TOKEN">
-    <div style="margin-top:16px"><button onclick="doLogin()">登录</button></div>
+    <div class="btn-row"><button class="btn" onclick="doLogin()">登录</button></div>
     <div id="loginResult"></div>
   </div>
 </div>
 
 <div id="mainView" style="display:none">
-  <h1>热剧榜 · 管理后台</h1>
-  <p class="sub">
-    录入后 15 分钟内爬虫自动采集；立刻提交请 <code>systemctl restart rejubang-crawler</code>
-    <span style="float:right"><button class="secondary small" onclick="doLogout()">退出</button></span>
-  </p>
+  <div class="topbar">
+    <div>
+      <h1>神奇奶酪 · 热剧榜管理后台</h1>
+      <p class="sub">
+        录入后约 15 分钟内爬虫自动采集；如需立即采集请 <code>systemctl restart rejubang-crawler</code>
+      </p>
+    </div>
+    <div class="quick-actions">
+      <button class="btn secondary small" onclick="doLogout()">退出登录</button>
+    </div>
+  </div>
 
   <div class="card">
-    <h2>➕ 新增 / 更新剧集</h2>
+    <h2><span class="ico">＋</span>新增 / 更新剧集</h2>
+
     <label>剧名 <span style="color:#e74c3c">*</span></label>
-    <input id="title" placeholder="例：蜜语纪">
+    <input id="title" placeholder="例：方圆八百米">
 
     <div class="row">
       <div>
@@ -338,195 +376,257 @@ ADMIN_HTML = r"""
       </div>
     </div>
 
-    <label>海报图 URL（可选，留空爬虫会按需补充）</label>
+    <label>海报图 URL（可选）</label>
     <input id="poster_url" placeholder="https://...">
 
-    <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
-    <p style="color:#666; margin:0 0 10px;">
-      <strong>各平台链接</strong>（至少填 1 个，支持整条详情页 URL 或裸 ID）
-    </p>
+    <div style="margin:18px 0 8px; padding-top:14px; border-top:1px dashed #e0e3eb;">
+      <strong style="color:#444;">各平台完整页面链接</strong>
+      <span style="color:#999;font-size:12px;">（至少填 1 个；不再接受裸 ID，请填浏览器地址栏完整 URL）</span>
+    </div>
 
-    <label>腾讯视频</label>
-    <input id="tencent" placeholder="https://v.qq.com/x/cover/mzc002006dzzunf.html  或  mzc002006dzzunf">
-
-    <label>爱奇艺</label>
-    <input id="iqiyi" placeholder="https://www.iqiyi.com/v_pz64qf5dtk.html  或  v_pz64qf5dtk">
-
-    <label>优酷</label>
-    <input id="youku" placeholder="https://v.youku.com/v_show/id_xxxxxxx.html">
-
-    <label>芒果TV</label>
-    <input id="mgtv" placeholder="https://www.mgtv.com/b/742534/25318094.html">
+    <div class="grid-platforms">
+      <div>
+        <label>腾讯视频 — 移动播放页</label>
+        <input id="tencent" placeholder="https://m.v.qq.com/x/m/play?cid=...&vid=...">
+        <div class="hint">用手机浏览器打开剧集任意一集，复制地址栏 URL（带 cid 和 vid）</div>
+      </div>
+      <div>
+        <label>爱奇艺 — PC 专辑页</label>
+        <input id="iqiyi" placeholder="https://www.iqiyi.com/a_xxx.html">
+        <div class="hint">必须是带 <code>a_</code> 前缀的专辑页，不要单集页 <code>v_</code></div>
+      </div>
+      <div>
+        <label>优酷 — PC 播放页</label>
+        <input id="youku" placeholder="https://v.youku.com/v_show/id_xxx.html">
+        <div class="hint">从 v.youku.com 剧集详情或单集播放页复制完整 URL</div>
+      </div>
+      <div>
+        <label>芒果TV — 完整页面链接</label>
+        <input id="mgtv" placeholder="https://www.mgtv.com/b/{partId}/{clipId}.html">
+        <div class="hint">从 mgtv.com 剧集页面复制完整 URL（含两段数字 ID）</div>
+      </div>
+    </div>
 
     <label>剧情简介（可选）</label>
     <textarea id="synopsis" rows="3"></textarea>
 
-    <div style="margin-top:16px">
-      <button onclick="submitDrama()">保存录入</button>
-      <button class="secondary" onclick="testExtract()">先测试热度提取</button>
+    <div class="btn-row">
+      <button class="btn" onclick="submitDrama()">保存录入</button>
+      <button class="btn secondary" onclick="testExtract()">先测试热度提取</button>
     </div>
     <div id="submitResult"></div>
   </div>
 
+  <div class="card" id="testCard" style="display:none">
+    <h2><span class="ico">⚙</span>热度提取测试结果</h2>
+    <div id="testResultBox"></div>
+  </div>
+
   <div class="card">
-    <h2>📋 当前在播剧清单 <button class="small secondary" onclick="loadList()">刷新</button></h2>
+    <h2 style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:8px;"><span class="ico">📋</span>当前剧集</span>
+      <button class="btn secondary small" onclick="loadList()">刷新</button>
+    </h2>
     <div id="dramaList">加载中…</div>
   </div>
+
+  <footer>神奇奶酪出品 · 热剧榜后台</footer>
 </div>
 
 </div>
 
 <script>
 const API = '/api/v1/admin';
+const $ = id => document.getElementById(id);
 
-function toast(el, msg, ok) {
-  el.innerHTML = '<div class="result '+(ok?'ok':'err')+'">'+msg+'</div>';
+function toast(el, msg, kind) {
+  el.innerHTML = '<div class="result ' + (kind || 'info') + '">' + msg + '</div>';
 }
 
 async function doLogin() {
-  const token = document.getElementById('tokenInput').value.trim();
-  const res = await fetch(API+'/login', {
-    method:'POST', credentials:'same-origin',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({token})
+  const token = $('tokenInput').value.trim();
+  const res = await fetch(API + '/login', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
   });
   const d = await res.json();
-  if (res.ok && d.code === 0) {
-    showMain();
-  } else {
-    toast(document.getElementById('loginResult'), d.msg || '登录失败', false);
-  }
+  if (res.ok && d.code === 0) showMain();
+  else toast($('loginResult'), d.msg || '登录失败', 'err');
 }
 
 async function doLogout() {
-  await fetch(API+'/logout', {method:'POST', credentials:'same-origin'});
+  await fetch(API + '/logout', { method: 'POST', credentials: 'same-origin' });
   location.reload();
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 async function submitDrama() {
   const payload = {};
   ['title','air_date','type','poster_url','tencent','iqiyi','youku','mgtv','synopsis']
-    .forEach(k => { payload[k] = document.getElementById(k).value.trim(); });
+    .forEach(k => { payload[k] = ($(k).value || '').trim(); });
 
   if (!payload.title) {
-    toast(document.getElementById('submitResult'), '剧名不能为空', false);
+    toast($('submitResult'), '剧名不能为空', 'err');
     return;
   }
   if (!payload.tencent && !payload.iqiyi && !payload.youku && !payload.mgtv) {
-    toast(document.getElementById('submitResult'), '至少填一个平台的 URL/ID', false);
+    toast($('submitResult'), '请至少填写一个平台的完整页面链接', 'err');
     return;
   }
 
-  const res = await fetch(API+'/dramas', {
-    method:'POST', credentials:'same-origin',
-    headers:{'Content-Type':'application/json'},
+  const res = await fetch(API + '/dramas', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   const d = await res.json();
   if (d.code === 0) {
     let html = '✓ 已保存，drama_id=' + d.data.drama_id + '\n';
-    (d.data.linked||[]).forEach(l => {
+    (d.data.linked || []).forEach(l => {
       html += '  [' + l.platform + '] ' + l.id + ' → ' + l.url + '\n';
     });
     if (d.data.warnings && d.data.warnings.length) {
       html += '\n⚠ 以下输入被忽略：\n' + d.data.warnings.join('\n');
     }
-    toast(document.getElementById('submitResult'), html, true);
+    toast($('submitResult'), escHtml(html), 'ok');
     loadList();
-    // 清空表单（保留日期）
     ['title','poster_url','tencent','iqiyi','youku','mgtv','synopsis']
-      .forEach(k => document.getElementById(k).value = '');
+      .forEach(k => { $(k).value = ''; });
   } else {
-    toast(document.getElementById('submitResult'),
-          '✗ ' + (d.msg || '保存失败') +
-          (d.errors ? '\n' + d.errors.join('\n') : ''), false);
+    let msg = '✗ ' + (d.msg || '保存失败');
+    if (d.errors && d.errors.length) msg += '\n' + d.errors.join('\n');
+    toast($('submitResult'), escHtml(msg), 'err');
   }
+}
+
+function debugTable(d) {
+  if (!d) return '';
+  const rows = [
+    ['platform', d.platform],
+    ['source_type', d.source_type],
+    ['match_pattern', d.match_pattern],
+    ['matched_snippet', d.matched_snippet],
+    ['final_url', d.final_url],
+    ['errors', (d.errors && d.errors.length) ? d.errors.join(' | ') : ''],
+  ];
+  let html = '<table class="debug-table">';
+  rows.forEach(r => {
+    html += '<tr><th>' + escHtml(r[0]) + '</th><td>' + escHtml(r[1] == null ? '' : r[1]) + '</td></tr>';
+  });
+  html += '</table>';
+  return html;
 }
 
 async function testExtract() {
   const platforms = ['tencent','iqiyi','youku','mgtv'];
-  const out = [];
-  for (const p of platforms) {
-    const v = document.getElementById(p).value.trim();
-    if (!v) continue;
-    out.push('正在测试 '+p+' …');
-    document.getElementById('submitResult').innerHTML =
-      '<div class="result ok">' + out.join('\n') + '</div>';
+  const items = platforms
+    .map(p => ({ p, v: ($(p).value || '').trim() }))
+    .filter(x => x.v);
+
+  if (!items.length) {
+    toast($('submitResult'), '请先填写至少一个平台链接再点测试', 'err');
+    return;
+  }
+
+  $('testCard').style.display = '';
+  const box = $('testResultBox');
+  box.innerHTML = '<div class="result info">测试中…</div>';
+
+  const blocks = [];
+  for (const it of items) {
+    blocks.push('<div class="result info" style="margin-top:10px;"><strong>' +
+      escHtml(it.p) + '</strong> 测试中… ' + escHtml(it.v) + '</div>');
+    box.innerHTML = blocks.join('');
     try {
-      const res = await fetch(API+'/test_extract', {
-        method:'POST', credentials:'same-origin',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({platform: p, url: v})
+      const res = await fetch(API + '/test_extract', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: it.p, url: it.v })
       });
       const d = await res.json();
-      if (d.code === 0 && d.data.value > 0) {
-        out[out.length-1] = '✓ '+p+' 热度/播放量 = '+d.data.value+'  (URL: '+d.data.url+')';
-      } else {
-        out[out.length-1] = '✗ '+p+' 未提取到数值  msg='+(d.msg||'?');
-      }
+      const ok = d.code === 0 && d.data && Number(d.data.value) > 0;
+      const cls = ok ? 'ok' : 'err';
+      const mark = ok ? '✓' : '✗';
+      const valTxt = (d.data && d.data.value) ? d.data.value : '0';
+      const block =
+        '<div class="result ' + cls + '" style="margin-top:10px;">' +
+        '<strong>' + mark + ' ' + escHtml(it.p) + '</strong>　value = <strong>' +
+        escHtml(valTxt) + '</strong>' +
+        (d.msg ? '　<span style="opacity:.7;">' + escHtml(d.msg) + '</span>' : '') +
+        debugTable(d.data && d.data.debug) +
+        '</div>';
+      blocks[blocks.length - items.length + items.indexOf(it)] = block;
+      box.innerHTML = blocks.join('');
     } catch (e) {
-      out[out.length-1] = '✗ '+p+' 异常: '+e;
+      blocks.push('<div class="result err" style="margin-top:10px;">✗ ' +
+        escHtml(it.p) + ' 异常：' + escHtml(e.message || e) + '</div>');
+      box.innerHTML = blocks.join('');
     }
-    document.getElementById('submitResult').innerHTML =
-      '<div class="result ok">' + out.join('\n') + '</div>';
   }
 }
 
 async function loadList() {
-  document.getElementById('dramaList').innerText = '加载中…';
-  const res = await fetch(API+'/dramas', {credentials:'same-origin'});
+  $('dramaList').innerHTML = '<div class="result info">加载中…</div>';
+  const res = await fetch(API + '/dramas', { credentials: 'same-origin' });
   const d = await res.json();
   if (d.code !== 0) {
-    document.getElementById('dramaList').innerHTML =
-      '<div class="result err">加载失败: '+(d.msg||'?')+'</div>';
+    $('dramaList').innerHTML = '<div class="result err">加载失败：' + escHtml(d.msg || '?') + '</div>';
     return;
   }
   if (!d.data.length) {
-    document.getElementById('dramaList').innerHTML =
-      '<p style="color:#888">尚无数据。在上方表单录入第一部剧试试。</p>';
+    $('dramaList').innerHTML = '<div class="result info">尚无剧集，请在上方表单录入。</div>';
     return;
   }
-  let html = '<table><tr><th>剧名</th><th>状态</th><th>开播</th><th>平台</th><th>最近采集</th><th>操作</th></tr>';
+  let html = '<div class="drama-grid">';
   d.data.forEach(r => {
-    const plats = (r.platforms||'').split(',').filter(Boolean)
-      .map(p => '<span class="badge p-'+p+'">'+p+'</span>').join('');
-    html += '<tr>'+
-      '<td><strong>'+(r.title||'?')+'</strong></td>'+
-      '<td>'+(r.status||'?')+'</td>'+
-      '<td>'+(r.air_date||'-')+'</td>'+
-      '<td>'+(plats||'-')+'</td>'+
-      '<td>'+(r.last_crawl||'<span style="color:#aaa">未采</span>')+'</td>'+
-      '<td>'+
-        (r.status === 'airing'
-          ? '<button class="small danger" onclick="setStatus('+r.id+",'delete')\">下架</button>"
-          : '<button class="small" onclick="setStatus('+r.id+",'reair')\">上架</button>")+
-      '</td></tr>';
+    const plats = (r.platforms || '').split(',').filter(Boolean)
+      .map(p => '<span class="badge p-' + escHtml(p) + '">' + escHtml(p) + '</span>').join('');
+    const statusCls = r.status === 'airing' ? 'airing' : (r.status === 'finished' ? 'finished' : '');
+    const action = r.status === 'airing'
+      ? '<button class="btn danger small" onclick="setStatus(' + r.id + ",'delete')\">下架</button>"
+      : '<button class="btn small" onclick="setStatus(' + r.id + ",'reair')\">上架</button>";
+    html +=
+      '<div class="drama-row">' +
+        '<div class="dname">' + escHtml(r.title || '?') + '</div>' +
+        '<div class="dmeta">' +
+          '<span class="status-pill ' + statusCls + '">' + escHtml(r.status || '?') + '</span>' +
+          '　开播：' + escHtml(r.air_date || '-') +
+          '　最近采集：' + escHtml(r.last_crawl || '未采') +
+        '</div>' +
+        '<div class="dplats">' + (plats || '<span class="status-pill">无平台</span>') + '</div>' +
+        '<div class="dactions">' + action + '</div>' +
+      '</div>';
   });
-  html += '</table>';
-  document.getElementById('dramaList').innerHTML = html;
+  html += '</div>';
+  $('dramaList').innerHTML = html;
 }
 
 async function setStatus(id, action) {
-  await fetch(API+'/dramas/'+id+'/'+action, {method:'POST', credentials:'same-origin'});
+  await fetch(API + '/dramas/' + id + '/' + action, { method: 'POST', credentials: 'same-origin' });
   loadList();
 }
 
 async function checkAuth() {
-  const res = await fetch(API+'/dramas', {credentials:'same-origin'});
+  const res = await fetch(API + '/dramas', { credentials: 'same-origin' });
   return res.ok;
 }
 
 function showMain() {
-  document.getElementById('loginView').style.display = 'none';
-  document.getElementById('mainView').style.display = 'block';
-  // 默认日期=今天
-  document.getElementById('air_date').value = new Date().toISOString().split('T')[0];
+  $('loginView').style.display = 'none';
+  $('mainView').style.display = 'block';
+  $('air_date').value = new Date().toISOString().split('T')[0];
   loadList();
 }
 
 (async function init() {
   if (await checkAuth()) showMain();
-  else document.getElementById('loginView').style.display = 'block';
+  else $('loginView').style.display = 'block';
 })();
 </script>
 </body>
