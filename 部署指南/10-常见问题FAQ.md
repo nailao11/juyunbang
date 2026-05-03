@@ -45,15 +45,19 @@
 
 ❌ 错误：
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# playwright install chromium
+playwright install chromium
 -bash: playwright: command not found
 ```
 
 ✅ 正确：
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
+./venv/bin/playwright install chromium
 ```
 
 ---
@@ -62,15 +66,19 @@ root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
 
 **原因**：`apt update` 没跑过（包索引为空）或系统不是 Debian 12。
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# apt update
-root@server:~# apt install -y python3 python3-venv ...
+apt update
+apt install -y python3 python3-venv ...
 ```
 
 如果是 Ubuntu，大部分包名一致，但 `python3-venv` 在部分 Ubuntu 版本叫 `python3.X-venv`，用：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# apt install -y python3.11-venv
+apt install -y python3.11-venv
 ```
 
 ---
@@ -79,16 +87,20 @@ root@server:~# apt install -y python3.11-venv
 
 换国内镜像重装：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+cd /opt/rejubang/backend
+./venv/bin/pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 或写到全局配置永久生效：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mkdir -p ~/.pip
-root@server:~# cat > ~/.pip/pip.conf <<'EOF'
+mkdir -p ~/.pip
+cat > ~/.pip/pip.conf <<'EOF'
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 trusted-host = pypi.tuna.tsinghua.edu.cn
@@ -105,18 +117,22 @@ EOF
 
 Playwright 默认从 `playwright.azureedge.net` 下载 Chromium。国内服务器可能连不上，换镜像：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# export PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
+export PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright
+cd /opt/rejubang/backend
+./venv/bin/playwright install chromium
 ```
 
 ### 4.2 报 `install-deps` 失败
 
 手动装依赖：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# apt install -y \
+apt install -y \
   libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
   libasound2 libpango-1.0-0 libcairo2 libxrandr2 libx11-xcb1 \
   libxcomposite1 libxdamage1 libxfixes3 libxss1 libatk1.0-0 \
@@ -129,9 +145,11 @@ root@server:~# apt install -y \
 
 Chromium 没下载成功。重装：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium --force
+cd /opt/rejubang/backend
+./venv/bin/playwright install chromium --force
 ```
 
 ---
@@ -142,21 +160,25 @@ root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium --forc
 
 如果还记得本文档预设的密码是 `RootDB_Pass_2026_NaiLao!`，就用它：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!'
+mysql -u root -p'RootDB_Pass_2026_NaiLao!'
 ```
 
 **情况 2**：密码已忘，重设 root 密码：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
 # 停止 MariaDB
-root@server:~# systemctl stop mariadb
+systemctl stop mariadb
 
 # 以跳过权限检查的方式启动
-root@server:~# mysqld_safe --skip-grant-tables &
+mysqld_safe --skip-grant-tables &
 
 # 登录（无密码）
-root@server:~# mysql -u root
+mysql -u root
 
 # 在 MariaDB 里执行
 MariaDB [(none)]> FLUSH PRIVILEGES;
@@ -164,10 +186,10 @@ MariaDB [(none)]> ALTER USER 'root'@'localhost' IDENTIFIED BY 'RootDB_Pass_2026_
 MariaDB [(none)]> EXIT;
 
 # 杀掉 safe 模式进程
-root@server:~# pkill mysqld
+pkill mysqld
 
 # 正常重启
-root@server:~# systemctl start mariadb
+systemctl start mariadb
 ```
 
 ---
@@ -178,16 +200,20 @@ root@server:~# systemctl start mariadb
 
 ### 方案 A：修改 `.env` 对上数据库里的密码
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# nano /opt/rejubang/backend/.env
+nano /opt/rejubang/backend/.env
 # 把 DB_PASSWORD 改为数据库里实际的密码
-root@server:~# systemctl restart rejubang-api rejubang-crawler
+systemctl restart rejubang-api rejubang-crawler
 ```
 
 ### 方案 B：修改数据库密码对上 `.env`
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
+mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
 ALTER USER 'rejubang'@'localhost' IDENTIFIED BY 'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA';
 FLUSH PRIVILEGES;
 "
@@ -195,8 +221,10 @@ FLUSH PRIVILEGES;
 
 然后重启服务：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl restart rejubang-api rejubang-crawler
+systemctl restart rejubang-api rejubang-crawler
 ```
 
 ---
@@ -205,14 +233,18 @@ root@server:~# systemctl restart rejubang-api rejubang-crawler
 
 直接用 nano 改：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# nano /opt/rejubang/backend/.env
+nano /opt/rejubang/backend/.env
 ```
 
 改完 `Ctrl + O` → 回车 → `Ctrl + X`。然后重启服务：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl restart rejubang-api rejubang-crawler
+systemctl restart rejubang-api rejubang-crawler
 ```
 
 ---
@@ -232,22 +264,28 @@ root@server:~# systemctl restart rejubang-api rejubang-crawler
 
 证书路径不对。检查 `/etc/nginx/sites-available/rejubang` 里的 `ssl_certificate` 路径：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# grep ssl_certificate /etc/nginx/sites-available/rejubang
+grep ssl_certificate /etc/nginx/sites-available/rejubang
 ```
 
 路径必须和证书真实位置一致：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# ls /etc/letsencrypt/live/
+ls /etc/letsencrypt/live/
 <你的主域名>
 ```
 
 **证书目录名是主域名**（例如 `nailao.asia`），不是 `api.nailao.asia`。如果路径不一致，用 nano 改配置：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# nano /etc/nginx/sites-available/rejubang
-root@server:~# nginx -t && systemctl restart nginx
+nano /etc/nginx/sites-available/rejubang
+nginx -t && systemctl restart nginx
 ```
 
 ---
@@ -258,17 +296,21 @@ root@server:~# nginx -t && systemctl restart nginx
 
 检查 Nginx 用的是 `fullchain.pem`（包含中间证书）**不是** `cert.pem`：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# grep ssl_certificate /etc/nginx/sites-available/rejubang
+grep ssl_certificate /etc/nginx/sites-available/rejubang
     ssl_certificate /etc/letsencrypt/live/<域名>/fullchain.pem;   ✅
     # ssl_certificate /etc/letsencrypt/live/<域名>/cert.pem;      ❌
 ```
 
 ### 情况 2：证书过期
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# certbot renew
-root@server:~# systemctl restart nginx
+certbot renew
+systemctl restart nginx
 ```
 
 ---
@@ -277,15 +319,17 @@ root@server:~# systemctl restart nginx
 
 **含义**：Nginx 能收到请求，但转发到 `127.0.0.1:5000` 时后端无响应。
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
 # 1. API 服务是不是挂了
-root@server:~# systemctl status rejubang-api --no-pager
+systemctl status rejubang-api --no-pager
 
 # 2. 看 API 日志里最近的错误
-root@server:~# journalctl -u rejubang-api -n 100 --no-pager | tail -50
+journalctl -u rejubang-api -n 100 --no-pager | tail -50
 
 # 3. 手动试试能不能直连后端
-root@server:~# curl http://127.0.0.1:5000/health
+curl http://127.0.0.1:5000/health
 ```
 
 - 如果 1 显示 `inactive` / `failed` → `systemctl restart rejubang-api`
@@ -298,8 +342,10 @@ root@server:~# curl http://127.0.0.1:5000/health
 
 后端代码抛异常了。看日志：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# journalctl -u rejubang-api -n 200 --no-pager | grep -E "(ERROR|Traceback)" -A 10
+journalctl -u rejubang-api -n 200 --no-pager | grep -E "(ERROR|Traceback)" -A 10
 ```
 
 常见：
@@ -326,8 +372,10 @@ root@server:~# journalctl -u rejubang-api -n 200 --no-pager | grep -E "(ERROR|Tr
 
 **步骤 1**：看爬虫日志
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# tail -100 /opt/rejubang/logs/scheduler_$(date +%Y-%m-%d).log
+tail -100 /opt/rejubang/logs/scheduler_$(date +%Y-%m-%d).log
 ```
 
 关键词：
@@ -337,8 +385,10 @@ root@server:~# tail -100 /opt/rejubang/logs/scheduler_$(date +%Y-%m-%d).log
 
 **步骤 2**：确认 dramas 表有"近 30 天"的剧（爬虫只爬近期新剧）
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 SELECT title, air_date, status FROM dramas
 WHERE air_date > DATE_SUB(NOW(), INTERVAL 30 DAY)
 LIMIT 20;
@@ -349,9 +399,11 @@ LIMIT 20;
 
 **步骤 3**：手动跑一次确认爬虫能工作
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --platform tencent
+cd /opt/rejubang/backend
+./venv/bin/python test_crawl.py --platform tencent
 ```
 
 看输出里有没有 `热度值: 12345` 这类数字。如果全是 0，说明爬虫逻辑需要更新。
@@ -360,8 +412,10 @@ root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --platform te
 
 ## <a id="q16"></a>Q16. 服务器内存不足进程被杀
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# dmesg | grep -i "out of memory" | tail -5
+dmesg | grep -i "out of memory" | tail -5
 ```
 
 看到 `Killed process XXX (mariadbd)` 这类输出就确认被 OOM 了。
@@ -370,8 +424,10 @@ root@server:~# dmesg | grep -i "out of memory" | tail -5
 
 **短期**：重启所有服务
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl restart mariadb redis-server nginx rejubang-api rejubang-crawler
+systemctl restart mariadb redis-server nginx rejubang-api rejubang-crawler
 ```
 
 **长期**：
@@ -386,9 +442,11 @@ root@server:~# systemctl restart mariadb redis-server nginx rejubang-api rejuban
 
 ### 服务器端开启 KeepAlive
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# echo -e "ClientAliveInterval 60\nClientAliveCountMax 3" >> /etc/ssh/sshd_config
-root@server:~# systemctl restart ssh
+echo -e "ClientAliveInterval 60\nClientAliveCountMax 3" >> /etc/ssh/sshd_config
+systemctl restart ssh
 ```
 
 ### 客户端开启 KeepAlive
@@ -405,28 +463,32 @@ Host *
 
 ## <a id="q18"></a>Q18. 磁盘被日志占满
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# df -h
-root@server:~# du -sh /opt/rejubang/logs /var/log /opt/backup
+df -h
+du -sh /opt/rejubang/logs /var/log /opt/backup
 ```
 
 按大到小清理：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
 # 项目日志（30 天前的）
-root@server:~# find /opt/rejubang/logs/ -name "*.log" -mtime +30 -delete
+find /opt/rejubang/logs/ -name "*.log" -mtime +30 -delete
 
 # journalctl 日志（只留 7 天）
-root@server:~# journalctl --vacuum-time=7d
+journalctl --vacuum-time=7d
 
 # Nginx 轮转日志
-root@server:~# find /var/log/nginx/ -name "*.gz" -mtime +14 -delete
+find /var/log/nginx/ -name "*.gz" -mtime +14 -delete
 
 # 数据库备份（只留 14 天，cron 已自动清理，手动也可跑）
-root@server:~# find /opt/backup/ -name "rejubang_*.sql" -mtime +14 -delete
+find /opt/backup/ -name "rejubang_*.sql" -mtime +14 -delete
 
 # apt 缓存
-root@server:~# apt clean
+apt clean
 ```
 
 ---
@@ -434,29 +496,35 @@ root@server:~# apt clean
 ## <a id="q19"></a>Q19. 如何修改域名（换域名）
 
 1. **买新域名，配 A 记录**（回 [01-前置准备.md](./01-前置准备.md) 第 3 节）
-2. **申请新域名的证书**：
+2. **申请新域名的证书**
+
+   📍 **位置**：云服务器 · 当前目录 `/root`
 
    ```
-   root@server:~# certbot certonly --nginx -d <新主域名> -d <新API域名>
+   certbot certonly --nginx -d <新主域名> -d <新API域名>
    ```
 
-3. **修改 Nginx 配置**：
+3. **修改 Nginx 配置**
+
+   📍 **位置**：云服务器 · 当前目录 `/root`
 
    ```
-   root@server:~# nano /etc/nginx/sites-available/rejubang
-   # 替换 server_name 和 ssl_certificate 路径
-   root@server:~# nginx -t && systemctl restart nginx
+   nano /etc/nginx/sites-available/rejubang
+   # 在编辑器里替换 server_name 和 ssl_certificate 路径
+   nginx -t && systemctl restart nginx
    ```
 
-4. **修改小程序**：
+4. **修改小程序**
    - 微信公众平台的合法域名改为新 API 域名
    - 本地 `miniapp/app.js` 的 `baseUrl` 改为新域名
    - 重新上传新版本小程序并提审
 
-5. **旧域名的 certbot 证书可以删**：
+5. **旧域名的 certbot 证书可以删**
+
+   📍 **位置**：云服务器 · 当前目录 `/root`
 
    ```
-   root@server:~# certbot delete --cert-name <旧主域名>
+   certbot delete --cert-name <旧主域名>
    ```
 
 ---
@@ -465,30 +533,36 @@ root@server:~# apt clean
 
 ### 仅停止（保留数据）
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl stop rejubang-api rejubang-crawler
-root@server:~# systemctl disable rejubang-api rejubang-crawler
+systemctl stop rejubang-api rejubang-crawler
+systemctl disable rejubang-api rejubang-crawler
 ```
 
 ### 彻底卸载（删代码、删服务单元）
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl stop rejubang-api rejubang-crawler
-root@server:~# systemctl disable rejubang-api rejubang-crawler
-root@server:~# rm /etc/systemd/system/rejubang-api.service
-root@server:~# rm /etc/systemd/system/rejubang-crawler.service
-root@server:~# systemctl daemon-reload
+systemctl stop rejubang-api rejubang-crawler
+systemctl disable rejubang-api rejubang-crawler
+rm /etc/systemd/system/rejubang-api.service
+rm /etc/systemd/system/rejubang-crawler.service
+systemctl daemon-reload
 
 # 先备份再删
-root@server:~# mysqldump -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' --single-transaction rejubang > /opt/backup/FINAL_BACKUP.sql
+mysqldump -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' --single-transaction rejubang > /opt/backup/FINAL_BACKUP.sql
 
-root@server:~# rm -rf /opt/rejubang
+rm -rf /opt/rejubang
 ```
 
 ### 删数据库（**不可恢复**）
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE rejubang; DROP USER 'rejubang'@'localhost';"
+mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE rejubang; DROP USER 'rejubang'@'localhost';"
 ```
 
 ---
@@ -501,35 +575,43 @@ root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "DROP DATABASE reju
 
 后端没起来或 Nginx 配置旧。
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl status rejubang-api
-root@server:~# nginx -t && grep admin /etc/nginx/sites-available/rejubang
+systemctl status rejubang-api
+nginx -t && grep admin /etc/nginx/sites-available/rejubang
 ```
 
 如果 Nginx 配置里没有 `location = /admin {` 这段，说明你用的是老版本 nginx.conf，重新复制：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# cp /opt/rejubang/deploy/nginx.conf /etc/nginx/sites-available/rejubang
+cp /opt/rejubang/deploy/nginx.conf /etc/nginx/sites-available/rejubang
 # 然后再按第六册 3.3 替换域名
-root@server:~# nginx -t && systemctl restart nginx
+nginx -t && systemctl restart nginx
 ```
 
 ### 情况 2："ADMIN_TOKEN 未配置，无法使用管理后台"
 
 `.env` 里没有 `ADMIN_TOKEN` 字段。编辑加上：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# nano /opt/rejubang/backend/.env
+nano /opt/rejubang/backend/.env
 # 加一行：ADMIN_TOKEN=zCfQR0OkgWbZwaG4iw5Vb1E3ksvGAxTpR8nGk7gd--c
-root@server:~# systemctl restart rejubang-api
+systemctl restart rejubang-api
 ```
 
 ### 情况 3：登录页输完点按钮报 "Token 错误"
 
 粘贴的 token 里带了空格或换行。打开 `.env` 确认：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# grep ADMIN_TOKEN /opt/rejubang/backend/.env
+grep ADMIN_TOKEN /opt/rejubang/backend/.env
 ```
 
 复制**等号右边完整字符串**粘贴到登录框。
@@ -549,8 +631,11 @@ root@server:~# grep ADMIN_TOKEN /opt/rejubang/backend/.env
 | 芒果TV 的 URL 只有一段数字 | 芒果需要 `partId/clipId` 两段，缺一不可 |
 
 快速验证 Playwright 能启动：
+
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --env
+./venv/bin/python test_crawl.py --env
 ```
 
 ---
@@ -563,8 +648,10 @@ root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --env
 
 采集后查：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 SELECT d.title, p.short_name, h.heat_value, h.record_time
 FROM heat_realtime h
 JOIN dramas d ON h.drama_id=d.id
@@ -588,8 +675,10 @@ ORDER BY h.record_time DESC;
 
 **方式 2：直接改库**：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
+mysql -u rejubang -p'i7qxW0ZUGwWBMSUqm2TdJCB3DefTwosA' rejubang -e "
 UPDATE dramas SET status='finished' WHERE title='剧名';
 "
 ```
@@ -609,8 +698,10 @@ UPDATE dramas SET status='finished' WHERE title='剧名';
 
 **手动查一下当前占用**：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
+mysql -u root -p'RootDB_Pass_2026_NaiLao!' -e "
 SELECT table_name, ROUND(data_length/1024/1024,2) AS data_mb,
        ROUND(index_length/1024/1024,2) AS idx_mb, table_rows
 FROM information_schema.tables
@@ -621,10 +712,12 @@ ORDER BY data_length DESC;
 
 **如果归档任务没跑**（表大小异常增长）：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
 # 手动触发一次
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/python -c "
+cd /opt/rejubang/backend
+./venv/bin/python -c "
 from app import create_app
 app = create_app()
 with app.app_context():
@@ -643,11 +736,13 @@ with app.app_context():
 
 **处理**：升级 playwright。先切到后端：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/pip install 'playwright>=1.55' --upgrade
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install-deps chromium
+cd /opt/rejubang/backend
+./venv/bin/pip install 'playwright>=1.55' --upgrade
+./venv/bin/playwright install chromium
+./venv/bin/playwright install-deps chromium
 ```
 
 或者手动装（见 [03-项目与Python环境.md 第 4.3 节](./03-项目与Python环境.md#43-如果-install-deps-报错)）。
@@ -660,15 +755,20 @@ root@server:/opt/rejubang/backend# ./venv/bin/playwright install-deps chromium
 
 **处理**：升级 lxml 到 5.3+（已内置 cp313 wheel）。
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip install 'lxml>=5.3' --upgrade
+./venv/bin/pip install 'lxml>=5.3' --upgrade
 ```
 
 如果你坚持要用旧版（不推荐）：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# apt install -y libxml2-dev libxslt1-dev python3-dev
-root@server:/opt/rejubang/backend# ./venv/bin/pip install lxml==4.9.3 --no-binary=:all:
+apt install -y libxml2-dev libxslt1-dev python3-dev
+cd /opt/rejubang/backend
+./venv/bin/pip install lxml==4.9.3 --no-binary=:all:
 ```
 
 ---
@@ -687,14 +787,16 @@ error: externally-managed-environment
 
 **处理**：**不要用系统 pip**。本项目所有 `pip install` 命令都应该用虚拟环境里的 pip：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
 ❌ 错误（会被 PEP 668 拒绝）：
-root@server:~# pip install xxx
-root@server:~# pip3 install xxx
+pip install xxx
+pip3 install xxx
 
 ✅ 正确（走虚拟环境）：
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# ./venv/bin/pip install xxx
+cd /opt/rejubang/backend
+./venv/bin/pip install xxx
 ```
 
 如果你一不小心用系统 pip 装了某个包，用 `apt` 对应包或者删掉重来都不影响项目。
