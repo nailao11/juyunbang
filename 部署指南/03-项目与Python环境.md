@@ -12,23 +12,29 @@
 
 `/opt` 是 Linux 惯例上用于放"第三方应用"的目录，权限干净、不会和系统包冲突。
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt
-root@server:/opt# pwd
+cd /opt
+pwd
 /opt
 ```
 
 ### 1.2 克隆项目
 
+📍 **位置**：云服务器 · 当前目录 `/opt`
+
 ```
-root@server:/opt# git clone https://github.com/nailao11/juyunbang.git /opt/rejubang
+git clone https://github.com/nailao11/juyunbang.git /opt/rejubang
 ```
 
 这会把项目下载到 `/opt/rejubang`。下载完成后：
 
+📍 **位置**：云服务器 · 起始目录 `/opt`（块内会切换到 `/opt/rejubang`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:/opt# cd /opt/rejubang
-root@server:/opt/rejubang# ls
+cd /opt/rejubang
+ls
 backend  deploy  miniapp  README.md  部署指南  部署指南.md  追剧助手微信小程序_完整开发方案.md
 ```
 
@@ -38,17 +44,21 @@ backend  deploy  miniapp  README.md  部署指南  部署指南.md  追剧助手
 
 重新部署时只需要更新到最新代码：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang
-root@server:/opt/rejubang# git pull origin main
+cd /opt/rejubang
+git pull origin main
 ```
 
 ### 1.4 如果 `git clone` 提示 "Connection refused" 或 "超时"
 
 服务器访问 GitHub 慢/不通时，可以改用 HTTPS 加速镜像：
 
+📍 **位置**：云服务器 · 当前目录 `/opt`
+
 ```
-root@server:/opt# git clone https://ghfast.top/https://github.com/nailao11/juyunbang.git /opt/rejubang
+git clone https://ghfast.top/https://github.com/nailao11/juyunbang.git /opt/rejubang
 ```
 
 或用 `wget` 下载 zip 包再解压（略）。
@@ -61,9 +71,11 @@ root@server:/opt# git clone https://ghfast.top/https://github.com/nailao11/juyun
 
 **从这里开始，几乎所有命令都在 `/opt/rejubang/backend` 下执行**，先切过去：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# pwd
+cd /opt/rejubang/backend
+pwd
 /opt/rejubang/backend
 ```
 
@@ -71,16 +83,20 @@ root@server:/opt/rejubang/backend# pwd
 
 虚拟环境的作用是把项目的 Python 依赖和系统 Python 隔离开，避免污染。
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# python3 -m venv venv
+python3 -m venv venv
 ```
 
 执行完会在当前目录下生成一个 `venv/` 文件夹（里面是一套独立的 Python）。
 
 > ℹ️ **关于 PEP 668**：Debian 12 和 13 都默认开启 PEP 668（`externally-managed-environment`），**直接用系统 pip 装包会被拒绝**。这正是我们用 venv 的原因——venv 里的 pip 不受这个限制。本指南从不要求你往系统 Python 装包，只用 `./venv/bin/pip`。
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ls
+ls
 app  crawlers  gunicorn_config.py  migrations  processors  requirements.txt  run.py  scheduler  test_crawl.py  venv
 ```
 
@@ -101,14 +117,18 @@ app  crawlers  gunicorn_config.py  migrations  processors  requirements.txt  run
 
 ### 3.1 升级 pip（推荐，避免装依赖时老版本 pip 报奇怪错）
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip install --upgrade pip
+./venv/bin/pip install --upgrade pip
 ```
 
 ### 3.2 装项目依赖
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip install -r requirements.txt
+./venv/bin/pip install -r requirements.txt
 ```
 
 过程 2~5 分钟。依赖包括 Flask、Playwright、PyMySQL、Redis、APScheduler、七牛云 SDK 等。
@@ -117,14 +137,18 @@ root@server:/opt/rejubang/backend# ./venv/bin/pip install -r requirements.txt
 
 换清华大学镜像源重新装：
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+./venv/bin/pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ### 3.4 验证依赖装好
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/pip list | grep -E "Flask|playwright|PyMySQL|redis|APScheduler|lxml|cryptography"
+./venv/bin/pip list | grep -E "Flask|playwright|PyMySQL|redis|APScheduler|lxml|cryptography"
 ```
 
 应该看到：
@@ -149,8 +173,10 @@ Playwright 是 Python 包，但它还需要下载一份 Chromium 浏览器才能
 
 ### 4.1 下载 Chromium
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
+./venv/bin/playwright install chromium
 ```
 
 会下载约 150 MB，过程 1~3 分钟。浏览器装到 `~/.cache/ms-playwright/`（root 用户的缓存目录）。
@@ -159,22 +185,28 @@ root@server:/opt/rejubang/backend# ./venv/bin/playwright install chromium
 
 Chromium 运行时依赖一堆 Linux 共享库（libnss3 等）。执行：
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/playwright install-deps chromium
+./venv/bin/playwright install-deps chromium
 ```
 
 ### 4.3 如果 `install-deps` 报错
 
 **先确认系统版本**，然后用对应的命令：
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# cat /etc/os-release | grep -E "VERSION_ID|VERSION_CODENAME"
+cat /etc/os-release | grep -E "VERSION_ID|VERSION_CODENAME"
 ```
 
 #### 如果是 Debian 13 (Trixie) / Ubuntu 24.04+（包名带 `t64` 后缀）
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# apt install -y \
+apt install -y \
   libnss3 libnspr4 libdbus-1-3 \
   libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 \
   libasound2t64 libcups2t64 libglib2.0-0t64 \
@@ -185,8 +217,10 @@ root@server:/opt/rejubang/backend# apt install -y \
 
 #### 如果是 Debian 12 (Bookworm) / Ubuntu 22.04（老包名）
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# apt install -y \
+apt install -y \
   libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
   libasound2 libpango-1.0-0 libcairo2 libxrandr2 libx11-xcb1 \
   libxcomposite1 libxdamage1 libxfixes3 libxss1 libatk1.0-0 \
@@ -199,31 +233,41 @@ root@server:/opt/rejubang/backend# apt install -y \
 
 ### 4.4 快速验证 Playwright 能启动 Chromium
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
+
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(headless=True, args=['--no-sandbox']); print('OK'); b.close()"
+./venv/bin/python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(headless=True, args=['--no-sandbox']); print('OK'); b.close()"
 ```
 
 **只要输出 `OK` 就说明 Playwright 完全装好了。** 其他警告（如 libGL 警告）可以忽略。
 
 ---
 
-## 5. 测试爬虫（可选，可跳过先部署）
+## 5. 测试 Playwright 环境（可选）
+
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/backend`
 
 ```
-root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --skip-discovery
+./venv/bin/python test_crawl.py --env
 ```
 
-重点看 `[1/3] 检查Playwright...` 下面是否有两行 ✓：
+应该看到两个 ✓：
 
 ```
-[1/3] 检查Playwright...
-  ✓ playwright模块已安装
-  ✓ chromium浏览器可启动
+[1/2] 检查 Playwright 模块...
+  ✓ playwright 模块已安装
+
+[2/2] 检查 Chromium 能否启动...
+  ✓ chromium 可启动
 ```
 
-这两个 ✓ 就说明 Playwright 没问题。
+两个 ✓ 就说明 Playwright 环境完全 OK。
 
-> ⚠️ `[3/3]` 里各平台的热度提取结果可能显示 "未发现任何剧" 或 "热度值: 0"，这是**正常现象**——视频平台页面结构会不定期变动，爬虫逻辑需要跟着调整。这不影响 API 服务启动，后续可单独排查。
+> 📌 `test_crawl.py` 在新架构（v5）下只支持以下参数，不再有 `--skip-discovery`：
+> - `--env`：检查 Playwright 是否可启动（本步用的就是它）
+> - `--test-url <平台> <完整URL>`：测试单条页面链接的热度提取（部署完通过 /admin 录入剧集后用）
+> - `--run`：对 `drama_platforms` 表里所有在播剧跑一轮完整采集
+> - `--list`：列出数据库里已录入的剧
 
 ---
 
@@ -233,13 +277,15 @@ root@server:/opt/rejubang/backend# ./venv/bin/python test_crawl.py --skip-discov
 
 重连后养成习惯先 `cd` 一下：
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/backend`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/backend
-root@server:/opt/rejubang/backend# pwd
+cd /opt/rejubang/backend
+pwd
 /opt/rejubang/backend
 ```
 
-看到提示符末尾是 `/opt/rejubang/backend#` 才能继续执行后面的命令。
+看到 `pwd` 输出 `/opt/rejubang/backend` 才能继续执行后面的命令。本指南所有代码块上方的 `📍 位置` 已经标明了每个命令的工作目录，照着写即可。
 
 ---
 

@@ -17,16 +17,18 @@
 
 **建议先导出为 shell 变量**，后面命令直接引用：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```bash
-root@server:~# export DOMAIN=<你的域名>
-root@server:~# export API_DOMAIN=<你的API域名>
+export DOMAIN=<你的域名>
+export API_DOMAIN=<你的API域名>
 
 # 举例
 # export DOMAIN=nailao.asia
 # export API_DOMAIN=api.nailao.asia
 
 # 验证
-root@server:~# echo "主域名=$DOMAIN, API域名=$API_DOMAIN"
+echo "主域名=$DOMAIN, API域名=$API_DOMAIN"
 主域名=nailao.asia, API域名=api.nailao.asia
 ```
 
@@ -42,9 +44,11 @@ root@server:~# echo "主域名=$DOMAIN, API域名=$API_DOMAIN"
 
 在 **本地电脑** 执行：
 
+📍 **位置**：本地电脑
+
 ```
-[本地] $ ping <你的域名>
-[本地] $ ping <你的API域名>
+ping <你的域名>
+ping <你的API域名>
 ```
 
 两条都应该解析到**你服务器的公网 IP**。没解析到回第一册重新配 DNS，等 10 分钟再试。
@@ -54,8 +58,10 @@ root@server:~# echo "主域名=$DOMAIN, API域名=$API_DOMAIN"
 - 服务商控制台 → 安全组 → 入站规则：**确认 80 端口允许任何源（0.0.0.0/0）访问**
 - 服务器上 Nginx 正在监听 80 端口：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# ss -ltn | grep :80
+ss -ltn | grep :80
 LISTEN 0  511  0.0.0.0:80  0.0.0.0:*
 ```
 
@@ -63,14 +69,18 @@ LISTEN 0  511  0.0.0.0:80  0.0.0.0:*
 
 ## 2. 申请证书
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# certbot certonly --nginx -d $DOMAIN -d $API_DOMAIN
+certbot certonly --nginx -d $DOMAIN -d $API_DOMAIN
 ```
 
 等价于（不 export 变量的写法）：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# certbot certonly --nginx -d <你的域名> -d <你的API域名>
+certbot certonly --nginx -d <你的域名> -d <你的API域名>
 # 举例：certbot certonly --nginx -d nailao.asia -d api.nailao.asia
 ```
 
@@ -119,8 +129,10 @@ Key is saved at:         /etc/letsencrypt/live/<你的域名>/privkey.pem
 
 ### 2.2 验证证书文件存在
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# ls /etc/letsencrypt/live/$DOMAIN/
+ls /etc/letsencrypt/live/$DOMAIN/
 README  cert.pem  chain.pem  fullchain.pem  privkey.pem
 ```
 
@@ -147,17 +159,21 @@ README  cert.pem  chain.pem  fullchain.pem  privkey.pem
 
 ### 3.2 切到 deploy 目录
 
+📍 **位置**：云服务器 · 起始目录 `/root`（块内会切换到 `/opt/rejubang/deploy`，下方 `cd` 已写入代码，整段复制即可）
+
 ```
-root@server:~# cd /opt/rejubang/deploy
-root@server:/opt/rejubang/deploy# ls
+cd /opt/rejubang/deploy
+ls
 deploy.sh  nginx.conf  rejubang-api.service  rejubang-crawler.service
 ```
 
 ### 3.3 用 sed 替换 nginx.conf 里的域名
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/deploy`
+
 ```
-root@server:/opt/rejubang/deploy# sed -i "s|nailao\.asia|$DOMAIN|g" nginx.conf
-root@server:/opt/rejubang/deploy# sed -i "s|api\.$DOMAIN|$API_DOMAIN|g" nginx.conf
+sed -i "s|nailao\.asia|$DOMAIN|g" nginx.conf
+sed -i "s|api\.$DOMAIN|$API_DOMAIN|g" nginx.conf
 ```
 
 > 📌 **2026-04 版变更**：nginx.conf 里新增了 `/admin` 的反向代理（指向管理后台），无需额外配置，sed 替换域名后即生效。
@@ -169,8 +185,10 @@ root@server:/opt/rejubang/deploy# sed -i "s|api\.$DOMAIN|$API_DOMAIN|g" nginx.co
 
 ### 3.4 检查替换结果
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/deploy`
+
 ```
-root@server:/opt/rejubang/deploy# grep -E "server_name|ssl_certificate" nginx.conf
+grep -E "server_name|ssl_certificate" nginx.conf
     server_name <你的域名> <你的API域名>;
     server_name <你的API域名>;
     ssl_certificate /etc/letsencrypt/live/<你的域名>/fullchain.pem;
@@ -184,10 +202,12 @@ root@server:/opt/rejubang/deploy# grep -E "server_name|ssl_certificate" nginx.co
 
 ### 3.5 把配置复制到 Nginx 目录
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/deploy`
+
 ```
-root@server:/opt/rejubang/deploy# cp nginx.conf /etc/nginx/sites-available/rejubang
-root@server:/opt/rejubang/deploy# ln -sf /etc/nginx/sites-available/rejubang /etc/nginx/sites-enabled/rejubang
-root@server:/opt/rejubang/deploy# rm -f /etc/nginx/sites-enabled/default
+cp nginx.conf /etc/nginx/sites-available/rejubang
+ln -sf /etc/nginx/sites-available/rejubang /etc/nginx/sites-enabled/rejubang
+rm -f /etc/nginx/sites-enabled/default
 ```
 
 三条命令的作用：
@@ -200,8 +220,10 @@ root@server:/opt/rejubang/deploy# rm -f /etc/nginx/sites-enabled/default
 
 ### 3.6 测试 Nginx 配置语法
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/deploy`
+
 ```
-root@server:/opt/rejubang/deploy# nginx -t
+nginx -t
 nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
 nginx: configuration file /etc/nginx/nginx.conf test is successful
 ```
@@ -210,9 +232,11 @@ nginx: configuration file /etc/nginx/nginx.conf test is successful
 
 ### 3.7 重启 Nginx
 
+📍 **位置**：云服务器 · 当前目录 `/opt/rejubang/deploy`
+
 ```
-root@server:/opt/rejubang/deploy# systemctl restart nginx
-root@server:/opt/rejubang/deploy# systemctl is-active nginx
+systemctl restart nginx
+systemctl is-active nginx
 active
 ```
 
@@ -224,8 +248,10 @@ active
 
 后端 Flask 还没启动，所以 `/api/` 路径会返回 502，但根路径应返回一段 JSON：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# curl -I https://$API_DOMAIN/
+curl -I https://$API_DOMAIN/
 HTTP/2 200
 server: nginx/...
 ```
@@ -244,8 +270,10 @@ server: nginx/...
 
 ### 4.3 `/api/` 路径返回 502 是正常的
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# curl -I https://$API_DOMAIN/api/v1/heat/realtime/rank
+curl -I https://$API_DOMAIN/api/v1/heat/realtime/rank
 HTTP/2 502
 ```
 
@@ -259,8 +287,10 @@ Certbot 会自动创建 systemd 定时器，每天检查一次证书，到期前
 
 验证自动续期任务已启用：
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# systemctl list-timers | grep certbot
+systemctl list-timers | grep certbot
 Sun 2026-04-22 03:41:12 UTC ... certbot.timer  ...
 ```
 
@@ -268,8 +298,10 @@ Sun 2026-04-22 03:41:12 UTC ... certbot.timer  ...
 
 ### 5.1 手动测试续期（可选）
 
+📍 **位置**：云服务器 · 当前目录 `/root`
+
 ```
-root@server:~# certbot renew --dry-run
+certbot renew --dry-run
 ```
 
 `--dry-run` 是模拟续期，不会真的更新证书。最后看到 `Congratulations, all simulated renewals succeeded` 就说明续期机制可以工作。
