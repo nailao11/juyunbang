@@ -160,67 +160,128 @@ class AiringCrawler(BaseCrawler):
         return 0
 
     # ================================================================
-    # 爱奇艺：base_info 接口 JSON
+    # 爱奇艺：base_info JSON 接口为主，渲染文本 + 嵌入式 JSON 兜底
     # ================================================================
     def _extract_iqiyi_heat(self, browser, url):
         debug = self._new_debug('iqiyi', url, 'pc_album')
 
         data, meta = browser.capture_first_json_response(
             url,
-            url_keyword='mesh.if.iqiyi.com/tvg/v2/lw/base_info',
+            # 多关键字：iqiyi 偶尔会调整 base_info 路径，留几个 fallback
+            url_keywords=[
+                'mesh.if.iqiyi.com/tvg/v2/lw/base_info',  # 已确认主端点
+                'mesh.if.iqiyi.com/tvg',                  # 同域兜底
+                '/lw/base_info',                          # 路径兜底
+                'pcw-api.iqiyi.com/album/album/baseinfo', # 历史 PC API
+            ],
+            # 收集所有相关请求，便于诊断"页面到底请求了什么"
+            collect_keyword=[
+                'mesh.if.iqiyi', 'iqiyi.com/api', 'pcw-api', 'cache.video.iqiyi',
+                'base_info', 'baseinfo', '/heat', 'hotscore',
+            ],
             mobile=False,
             timeout=30000,
             extra_headers={
                 'Referer': 'https://www.iqiyi.com/',
                 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             },
-            wait_after_ms=5000,
+            wait_after_ms=8000,
             scroll=True,
         )
+
         if meta.get('final_url'):
             debug['final_url'] = meta['final_url']
         if meta.get('errors'):
             debug['errors'].extend(meta['errors'])
-        if not data:
-            debug['errors'].append('base_info response not captured')
-            self._set_debug(**debug)
-            return 0
+        if meta.get('candidate_urls'):
+            debug['candidate_urls'] = meta['candidate_urls']
 
-        base = (data.get('data') or {}).get('base_data') or {}
+        # ========== 1. base_info JSON 命中 ==========
+        if data:
+            base = (data.get('data') or {}).get('base_data') or {}
 
-        # 1) 优先 base_data.heat
-        heat = base.get('heat')
-        if heat not in (None, '', 0, '0'):
-            try:
-                v = float(heat)
-                if v > 0:
-                    debug.update({
-                        'source_type': 'base_info_heat',
-                        'match_pattern': 'data.base_data.heat',
-                        'matched_snippet': str(int(v)) if v == int(v) else str(v),
-                    })
-                    self._set_debug(**debug)
-                    return v
-            except (TypeError, ValueError):
-                pass
-
-        # 2) 退而取 base_data.label 中 style=red 的纯数字 txt
-        for item in (base.get('label') or []):
-            try:
-                if item.get('style') == 'red':
-                    txt = str(item.get('txt', '')).strip()
-                    if txt.isdigit():
+            heat = base.get('heat')
+            if heat not in (None, '', 0, '0'):
+                try:
+                    v = float(heat)
+                    if v > 0:
                         debug.update({
-                            'source_type': 'base_info_label',
-                            'match_pattern': 'data.base_data.label[red]',
-                            'matched_snippet': txt,
+                            'source_type': 'base_info_heat',
+                            'match_pattern': 'data.base_data.heat',
+                            'matched_snippet': str(int(v)) if v == int(v) else str(v),
                         })
                         self._set_debug(**debug)
-                        return float(txt)
-            except Exception:
-                continue
+                        return v
+                except (TypeError, ValueError):
+                    pass
 
-        debug['errors'].append('heat not found in base_info')
+            for item in (base.get('label') or []):
+                try:
+                    if item.get('style') == 'red':
+                        txt = str(item.get('txt', '')).strip()
+                        if txt.isdigit():
+                            debug.update({
+                                'source_type': 'base_info_label',
+                                'match_pattern': 'data.base_data.label[red]',
+                                'matched_snippet': txt,
+                            })
+                            self._set_debug(**debug)
+                            return float(txt)
+                except Exception:
+                    continue
+
+            debug['errors'].append('JSON 已捕获但 heat / label[red] 字段为空')
+        else:
+            debug['errors'].append('base_info JSON 未捕获，进入兜底（看 candidate_urls 排查实际请求）')
+
+        # ========== 2. 渲染文本兜底 ==========
+        text = browser.get_rendered_text(
+            url, mobile=False, timeout=20000, wait_after_ms=3000, scroll=True,
+        )
+        if text:
+            for pat, name in [
+                (r'热度[^\d]{0,5}([0-9]{2,9})', 'heat_then_num_text'),
+                (r'([0-9]{2,9})\s*热度',          'num_then_heat_text'),
+            ]:
+                m = re.search(pat, text)
+                if m:
+                    try:
+                        v = float(m.group(1))
+                        if v > 0:
+                            debug.update({
+                                'source_type': 'rendered_text_fallback',
+                                'match_pattern': name,
+                                'matched_snippet': m.group(0).strip(),
+                            })
+                            self._set_debug(**debug)
+                            return v
+                    except ValueError:
+                        pass
+
+        # ========== 3. HTML 嵌入式 JSON 兜底（window.__INITIAL_STATE__ 等） ==========
+        html = browser.get_html(url, mobile=False, timeout=20000)
+        if html:
+            for pat, name in [
+                (r'"heat"\s*:\s*"?([0-9]{2,9})"?',     'html_heat_field'),
+                (r'"hotScore"\s*:\s*"?([0-9]{2,9})"?', 'html_hotScore'),
+                (r'"hotValue"\s*:\s*"?([0-9]{2,9})"?', 'html_hotValue'),
+            ]:
+                m = re.search(pat, html)
+                if m:
+                    try:
+                        v = float(m.group(1))
+                        if v > 0:
+                            debug.update({
+                                'source_type': 'html_embedded_json',
+                                'match_pattern': name,
+                                'matched_snippet': m.group(0)[:80],
+                            })
+                            self._set_debug(**debug)
+                            return v
+                    except ValueError:
+                        pass
+
+        debug['errors'].append('rendered_text 与 html 兜底均未找到热度数字')
         self._set_debug(**debug)
         return 0
 

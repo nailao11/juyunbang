@@ -515,9 +515,13 @@ function debugTable(d) {
     ['final_url', d.final_url],
     ['errors', (d.errors && d.errors.length) ? d.errors.join(' | ') : ''],
   ];
+  if (d.candidate_urls && d.candidate_urls.length) {
+    rows.push(['candidate_urls', d.candidate_urls.join('\n')]);
+  }
   let html = '<table class="debug-table">';
   rows.forEach(r => {
-    html += '<tr><th>' + escHtml(r[0]) + '</th><td>' + escHtml(r[1] == null ? '' : r[1]) + '</td></tr>';
+    html += '<tr><th>' + escHtml(r[0]) + '</th><td style="white-space:pre-wrap;word-break:break-all;">' +
+            escHtml(r[1] == null ? '' : r[1]) + '</td></tr>';
   });
   html += '</table>';
   return html;

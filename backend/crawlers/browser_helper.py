@@ -182,34 +182,71 @@ class BrowserHelper:
             logger.warning(f"[Browser] get_rendered_text {url} 失败: {e}")
             return ''
 
-    def capture_first_json_response(self, url, url_keyword, mobile=False, timeout=30000,
+    def capture_first_json_response(self, url, url_keyword=None, url_keywords=None,
+                                    mobile=False, timeout=30000,
                                     close_selectors=None, extra_headers=None,
-                                    wait_after_ms=4000, scroll=False):
+                                    wait_after_ms=4000, scroll=False,
+                                    collect_keyword=None):
         """
-        访问 url 并监听响应；命中第一个 url 包含 url_keyword 且能解析为 JSON 的响应即返回。
+        访问 url 并监听响应；命中**任一** url_keyword(s) 且能解析为 JSON 的响应即返回。
+
+        参数:
+            url_keyword:    单个匹配关键字（兼容旧调用）
+            url_keywords:   关键字列表（任一匹配即命中）
+            collect_keyword: 字符串或列表；只要响应 URL 包含该关键字就收集到
+                             debug.candidate_urls（即使没命中 url_keyword 也收集）
+                             — 用于诊断"我到底应该匹配哪个端点"
 
         返回 (data_or_None, debug_dict)
-            debug_dict: {'final_url': matched_url|navigation_url, 'errors': [...]}
+            debug_dict: {
+                'final_url': matched_url|navigation_url,
+                'errors': [...],
+                'candidate_urls': [...],   # 命中 collect_keyword 的所有响应 URL（最多 30 条）
+            }
         """
-        debug = {'final_url': url, 'errors': []}
+        keywords = []
+        if url_keyword:
+            keywords.append(url_keyword)
+        if url_keywords:
+            keywords.extend([k for k in url_keywords if k])
+
+        if collect_keyword is None:
+            collect_kw = []
+        elif isinstance(collect_keyword, str):
+            collect_kw = [collect_keyword]
+        else:
+            collect_kw = list(collect_keyword)
+
+        debug = {'final_url': url, 'errors': [], 'candidate_urls': []}
         captured = {'data': None, 'matched_url': None}
 
         try:
             with self._page(mobile=mobile, extra_headers=extra_headers) as page:
                 def on_response(resp):
+                    rurl = resp.url
+
+                    # 1) 收集候选 URL（用于诊断，最多 30 条）
+                    if collect_kw and len(debug['candidate_urls']) < 30:
+                        if any(ck in rurl for ck in collect_kw):
+                            if rurl not in debug['candidate_urls']:
+                                debug['candidate_urls'].append(rurl)
+
+                    # 2) 命中匹配关键字 → 解析 JSON
                     if captured['data'] is not None:
                         return
+                    if not keywords:
+                        return
+                    if not any(kw in rurl for kw in keywords):
+                        return
+
                     try:
-                        if url_keyword and url_keyword in resp.url:
-                            try:
-                                data = resp.json()
-                            except Exception as e:
-                                debug['errors'].append(f"json parse: {e}")
-                                return
-                            captured['data'] = data
-                            captured['matched_url'] = resp.url
+                        data = resp.json()
                     except Exception as e:
-                        debug['errors'].append(f"on_response: {e}")
+                        debug['errors'].append(f"json parse fail @ {rurl[:80]}: {e}")
+                        return
+
+                    captured['data'] = data
+                    captured['matched_url'] = rurl
 
                 page.on('response', on_response)
 
@@ -218,6 +255,8 @@ class BrowserHelper:
 
                 if scroll:
                     try:
+                        page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+                        page.wait_for_timeout(400)
                         page.evaluate('window.scrollTo(0, document.body.scrollHeight/2)')
                     except Exception:
                         pass
